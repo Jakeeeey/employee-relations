@@ -6,13 +6,13 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {Separator} from "@/components/ui/separator";
-import {SidebarTrigger} from "@/components/ui/sidebar";
-import {NavUser} from "../../_components/nav-user";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { NavUser } from "../../_components/nav-user";
 
-import {cookies} from "next/headers";
+import { cookies } from "next/headers";
 
-import ComingSoon from "@/app/(employee-relations)/employee-relations/_components/ComingSoon";
+import OvertimeModule from "@/modules/employee-relations/application/overtime/OvertimeModule";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +41,15 @@ function pickString(obj: Record<string, unknown> | null | undefined, keys: strin
         if (typeof v === "string" && v.trim()) return v.trim();
     }
     return "";
+}
+
+function pickNumber(obj: Record<string, unknown> | null | undefined, keys: string[]): number | null {
+    for (const k of keys) {
+        const v = obj?.[k];
+        if (typeof v === "number") return v;
+        if (typeof v === "string" && !isNaN(parseInt(v))) return parseInt(v);
+    }
+    return null;
 }
 
 function buildHeaderUserFromToken(token: string | null | undefined) {
@@ -72,20 +81,21 @@ function buildHeaderUserFromToken(token: string | null | undefined) {
 }
 
 export default async function Page() {
-    // ✅ Next.js 16: cookies() is async
+    // Next.js 16: cookies() is async
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value ?? null;
 
     const headerUser = buildHeaderUserFromToken(token);
+    const payload = token ? decodeJwtPayload(token) : null;
+    const userId = pickNumber(payload, ["user_id", "userId", "id", "sub"]) ?? 0;
+    const departmentId = pickNumber(payload, ["user_department", "department_id", "departmentId"]);
 
     return (
-        // ✅ This fills the RIGHT column provided by SidebarInset (which is now fixed-height).
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            {/* ✅ Topbar is fixed in place because ONLY <main> scrolls */}
             <header
                 className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b shadow-sm bg-background sm:h-16 overflow-hidden">
                 <div className="flex h-full min-w-0 items-center gap-2 px-3 sm:px-4 overflow-hidden">
-                    <SidebarTrigger className="-ml-1 shrink-0"/>
+                    <SidebarTrigger className="-ml-1 shrink-0" />
 
                     <Separator
                         orientation="vertical"
@@ -98,11 +108,11 @@ export default async function Page() {
                                 <BreadcrumbItem className="hidden md:block shrink-0">
                                     <BreadcrumbLink href="#">Employee Relations</BreadcrumbLink>
                                 </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block shrink-0"/>
+                                <BreadcrumbSeparator className="hidden md:block shrink-0" />
                                 <BreadcrumbItem className="hidden md:block shrink-0">
                                     <BreadcrumbLink href="#">Application</BreadcrumbLink>
                                 </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block shrink-0"/>
+                                <BreadcrumbSeparator className="hidden md:block shrink-0" />
                                 <BreadcrumbItem className="min-w-0 overflow-hidden">
                                     <BreadcrumbPage className="truncate max-w-[56vw] sm:max-w-[60vw] md:max-w-none">
                                         Overtime
@@ -115,14 +125,14 @@ export default async function Page() {
 
                 <div
                     className="flex h-full items-center px-2 sm:px-4 shrink-0 max-w-[48vw] sm:max-w-none overflow-hidden">
-                    <NavUser user={headerUser}/>
+                    <NavUser user={headerUser} />
                 </div>
             </header>
 
-            {/* ✅ Only content scrolls inside RIGHT column */}
             <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4">
-                <ComingSoon/>
+                <OvertimeModule userId={userId} departmentId={departmentId} />
             </main>
+
         </div>
     );
 }

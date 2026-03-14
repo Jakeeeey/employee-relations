@@ -96,6 +96,7 @@ const POSITION_ACCESS: Record<Position, string[]> = {
         "comms",
         "pm-monitoring",
         "bia", // ✅ added
+        "er",
     ],
     Admin: [
         "scm",
@@ -108,10 +109,11 @@ const POSITION_ACCESS: Record<Position, string[]> = {
         "comms",
         "pm-monitoring",
         "bia", // ✅ added
+        "er",
     ],
     "SCM Staff": ["scm", "mfg"],
     "Finance Staff": ["finance"],
-    "HR Staff": ["hr"],
+    "HR Staff": ["hr", "er"],
     "Sales/CRM Staff": ["crm", "comms"],
     Auditor: ["arf", "finance"],
     PMO: ["pm", "pm-monitoring"],
@@ -129,6 +131,22 @@ const POSITIONS: Position[] = [
 ];
 
 const SUBSYSTEMS: SubsystemItem[] = [
+    {
+        id: "er",
+        title: "Employee Relations",
+        subtitle: "Leave, Overtime, Undertime reporting and applications",
+        href: "/employee-relations",
+        status: "active",
+        category: "Corporate Services",
+        icon: Users,
+        tag: "ER",
+        accentClass: "bg-pink-500/10 text-pink-600 dark:text-pink-300 ring-1 ring-pink-500/20",
+        submodules: [
+            { id: "leave", title: "Leave Tracker", status: "active" },
+            { id: "undertime", title: "Undertime", status: "active" },
+            { id: "overtime", title: "Overtime", status: "active" },
+        ],
+    },
     {
         id: "scm",
         title: "Supply Chain Management",
