@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { LeaveService } from "@/modules/employee-relations/application/leave/services/leaveService";
 import { CreateLeaveSchema } from "@/modules/employee-relations/application/leave/types";
+import { ZodError } from "zod";
 
 const COOKIE_NAME = "vos_access_token";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
 
@@ -22,13 +23,13 @@ export async function GET(req: NextRequest) {
     
     // Strict server-side isolation based on the securely decoded JWT token
     const filteredLeaves = strictUserId 
-      ? leaves.filter((l: any) => String(l.user_id) === String(strictUserId))
+      ? leaves.filter((l: { user_id: number | string }) => String(l.user_id) === String(strictUserId))
       : [];
 
     return NextResponse.json({ ok: true, data: filteredLeaves });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GET] Proxy error:", error);
-    return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -46,10 +47,10 @@ export async function POST(req: NextRequest) {
     
     const newLeave = await LeaveService.create(validatedData);
     return NextResponse.json({ ok: true, data: newLeave });
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return NextResponse.json({ ok: false, message: "Validation error", errors: error.errors }, { status: 400 });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ ok: false, message: "Validation error", errors: error.issues }, { status: 400 });
     }
-    return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }

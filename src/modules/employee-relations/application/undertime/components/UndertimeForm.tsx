@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UndertimeRequest, CreateUndertimeInput, CreateUndertimeSchema } from "../types";
 import { Button } from "@/components/ui/button";
@@ -42,8 +42,8 @@ export function UndertimeForm({ initialData, onSubmit, isLoading }: UndertimeFor
     },
   });
 
-  const schedOut = form.watch("sched_timeout");
-  const actualOut = form.watch("actual_timeout");
+  const schedOut = useWatch({ control: form.control, name: "sched_timeout" });
+  const actualOut = useWatch({ control: form.control, name: "actual_timeout" });
 
   useEffect(() => {
     if (schedOut && actualOut) {
@@ -55,7 +55,7 @@ export function UndertimeForm({ initialData, onSubmit, isLoading }: UndertimeFor
         if (diffMins < 0) diffMins = 0;
         
         form.setValue("duration_minutes", diffMins);
-      } catch (e) {
+      } catch {
         // Handle invalid time gracefully
       }
     }

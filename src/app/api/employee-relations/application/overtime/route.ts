@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { OvertimeService } from "@/modules/employee-relations/application/overtime/services/overtimeService";
 import { CreateOvertimeSchema } from "@/modules/employee-relations/application/overtime/types";
+import { ZodError } from "zod";
 
 const COOKIE_NAME = "vos_access_token";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
 
@@ -20,13 +21,13 @@ export async function GET(req: NextRequest) {
     
     // Strict server-side isolation based on the securely decoded JWT token
     const filteredRequests = strictUserId 
-      ? requests.filter((r: any) => String(r.user_id) === String(strictUserId))
+      ? requests.filter((r: { user_id: number | string }) => String(r.user_id) === String(strictUserId))
       : [];
 
     return NextResponse.json({ ok: true, data: filteredRequests });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[GET] Proxy error:", error);
-    return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -42,10 +43,10 @@ export async function POST(req: NextRequest) {
     
     const newRequest = await OvertimeService.create(validatedData);
     return NextResponse.json({ ok: true, data: newRequest });
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return NextResponse.json({ ok: false, message: "Validation error", errors: error.errors }, { status: 400 });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ ok: false, message: "Validation error", errors: error.issues }, { status: 400 });
     }
-    return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }

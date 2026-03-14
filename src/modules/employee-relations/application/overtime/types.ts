@@ -12,7 +12,7 @@ export const OvertimeRequestSchema = z.object({
   sched_timeout: z.string(), // "HH:mm" or "HH:mm:ss"
   ot_from: z.string(), // "HH:mm" or "HH:mm:ss"
   ot_to: z.string(), // "HH:mm" or "HH:mm:ss"
-  duration_minutes: z.number().default(0),
+  duration_minutes: z.number(),
   purpose: z.string().min(1, "Purpose is required"),
   remarks: z.string().nullable().optional(),
   status: OvertimeStatusEnum.default("pending"),

@@ -19,9 +19,10 @@ export function useOvertime(userId?: number) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch overtime requests");
       setRequests(data.data);
-    } catch (err: any) {
-      setError(err.message);
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -45,8 +46,9 @@ export function useOvertime(userId?: number) {
       setRequests((prev) => [result.data, ...prev]);
       toast.success("Overtime request created successfully");
       return result.data;
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      toast.error(message);
       throw err;
     } finally {
       setIsLoading(false);
@@ -69,8 +71,9 @@ export function useOvertime(userId?: number) {
       );
       toast.success("Overtime request updated successfully");
       return result.data;
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      toast.error(message);
       throw err;
     } finally {
       setIsLoading(false);

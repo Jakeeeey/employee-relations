@@ -29,7 +29,7 @@ export class OvertimeService {
     const payload = await res.json();
     const data = payload.data || payload || [];
     
-    return (Array.isArray(data) ? data : []).map((item: any) => ({
+    return (Array.isArray(data) ? data : []).map((item: Record<string, unknown>) => ({
       ...item,
       duration_minutes: item.duration_minutes ? parseInt(String(item.duration_minutes)) : 0,
     })) as OvertimeRequest[];

@@ -12,7 +12,6 @@ import {NavUser} from "../../_components/nav-user";
 
 import {cookies} from "next/headers";
 
-import ComingSoon from "@/app/(employee-relations)/employee-relations/_components/ComingSoon";
 import LeaveModule from "@/modules/employee-relations/application/leave/LeaveModule";
 
 

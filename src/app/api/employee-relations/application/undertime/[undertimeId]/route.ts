@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { UndertimeService } from "@/modules/employee-relations/application/undertime/services/undertimeService";
 import { UpdateUndertimeSchema } from "@/modules/employee-relations/application/undertime/types";
+import { ZodError } from "zod";
 
 const COOKIE_NAME = "vos_access_token";
 
@@ -36,10 +37,10 @@ export async function PATCH(
     // Use token identity as updated_by
     const updatedRequest = await UndertimeService.update(parseInt(undertimeId), validatedData, userId);
     return NextResponse.json({ ok: true, data: updatedRequest });
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return NextResponse.json({ ok: false, message: "Validation error", errors: error.errors }, { status: 400 });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ ok: false, message: "Validation error", errors: error.issues }, { status: 400 });
     }
-    return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
+    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }

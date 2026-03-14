@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { OvertimeRequest, CreateOvertimeInput, CreateOvertimeSchema } from "../types";
 import { Button } from "@/components/ui/button";
@@ -43,8 +43,8 @@ export function OvertimeForm({ initialData, onSubmit, isLoading }: OvertimeFormP
     },
   });
 
-  const otFrom = form.watch("ot_from");
-  const otTo = form.watch("ot_to");
+  const otFrom = useWatch({ control: form.control, name: "ot_from" });
+  const otTo = useWatch({ control: form.control, name: "ot_to" });
 
   useEffect(() => {
     if (otFrom && otTo) {
@@ -62,7 +62,7 @@ export function OvertimeForm({ initialData, onSubmit, isLoading }: OvertimeFormP
         if (diffMins < 0) diffMins = 0;
         
         form.setValue("duration_minutes", diffMins);
-      } catch (e) {
+      } catch {
         // Handle invalid time gracefully
       }
     }

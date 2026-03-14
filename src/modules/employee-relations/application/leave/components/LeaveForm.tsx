@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateLeaveSchema, CreateLeaveInput, LeaveTypeEnum, LeaveRequest } from "../types";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -23,7 +23,7 @@ interface LeaveFormProps {
 
 export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) {
   const form = useForm<CreateLeaveInput>({
-    resolver: zodResolver(CreateLeaveSchema) as any,
+    resolver: zodResolver(CreateLeaveSchema),
     defaultValues: {
       leave_type: initialData?.leave_type || "vacation",
       leave_start: initialData?.leave_start || null,
@@ -36,9 +36,9 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
     },
   });
 
-  const { watch, setValue } = form;
-  const leaveStart = watch("leave_start");
-  const leaveEnd = watch("leave_end");
+  const { setValue, control } = form;
+  const leaveStart = useWatch({ control, name: "leave_start" });
+  const leaveEnd = useWatch({ control, name: "leave_end" });
 
   useEffect(() => {
     if (leaveStart && leaveEnd) {

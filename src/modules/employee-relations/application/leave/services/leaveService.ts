@@ -32,9 +32,9 @@ export class LeaveService {
     const data = payload.data || payload || [];
     
     // Handle decimals if they come back as strings
-    return (Array.isArray(data) ? data : []).map((item: any) => ({
+    return (Array.isArray(data) ? data : []).map((item: Record<string, unknown>) => ({
       ...item,
-      total_days: item.total_days ? parseFloat(item.total_days) : 0,
+      total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,
     })) as LeaveRequest[];
   }
 

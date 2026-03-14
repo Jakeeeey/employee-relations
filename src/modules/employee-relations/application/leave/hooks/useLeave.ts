@@ -21,13 +21,14 @@ export function useLeave(userId?: number) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch leaves");
       setLeaves(data.data);
-    } catch (err: any) {
-      setError(err.message);
-      toast.error("Error", { description: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(message);
+      toast.error("Error", { description: message });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   const createLeave = async (input: CreateLeaveInput) => {
     setIsLoading(true);
@@ -43,8 +44,9 @@ export function useLeave(userId?: number) {
       toast.success("Success", { description: "Leave request submitted successfully" });
       fetchLeaves();
       return data.data;
-    } catch (err: any) {
-      toast.error("Error", { description: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      toast.error("Error", { description: message });
       throw err;
     } finally {
       setIsLoading(false);
@@ -65,8 +67,9 @@ export function useLeave(userId?: number) {
       toast.success("Success", { description: "Leave request updated successfully" });
       fetchLeaves();
       return data.data;
-    } catch (err: any) {
-      toast.error("Error", { description: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      toast.error("Error", { description: message });
       throw err;
     } finally {
       setIsLoading(false);
