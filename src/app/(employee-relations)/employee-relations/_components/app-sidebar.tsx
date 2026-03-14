@@ -27,47 +27,35 @@ import {
 
 const data = {
     navMain: [
-        { title: "Dashboard", url: "/crm/", icon: LayoutDashboard },
-        { title: "Customer", url: "/crm/customer/", icon: Users },
         {
-            title: "Salesman Management",
-            url: "/crm/customer-hub/salesman-management",
+            title: "Attendance Report",
+            url: "/employee-relations/attendance-report",
             icon: Users,
         },
         {
-            title: "Customer Hub",
+            title: "Application",
             url: "#",
             icon: Bot,
             items: [
                 {
-                    title: "Callsheet Printable",
-                    url: "/crm/customer-hub/callsheet-printable",
+                    title: "Overtime",
+                    url: "/employee-relations/application/overtime",
                     icon: ClipboardList,
                 },
                 {
-                    title: "Callsheet",
-                    url: "/crm/customer-hub/callsheet",
+                    title: "Undertime",
+                    url: "/employee-relations/application/undertime",
                     icon: ClipboardList,
                 },
                 {
-                    title: "Sales Order Report",
-                    url: "/crm/customer-hub/sales-order-report",
+                    title: "Leave",
+                    url: "/employee-relations/application/leave",
                     icon: ShoppingCart,
                 },
-                {
-                    title: "Create Sales Order",
-                    url: "/crm/customer-hub/create-sales-order",
-                    icon: ShoppingCart,
-                },
-                {
-                    title: "Sales Order Approval",
-                    url: "/crm/customer-hub/sales-order-approval",
-                    icon: ClipboardList,
-                },
-                // { title: "Disbursement", url: "/fm/treasury/disbursement" },
-                // { title: "Remittances", url: "/fm/treasury/remittances" },
             ],
         },
+        { title: "Memo", url: "/employee-relations/memo", icon: Users },
+        { title: "Announcement", url: "/employee-relations/announcement", icon: Users },
     ],
 };
 
