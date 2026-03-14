@@ -12,7 +12,7 @@ import {NavUser} from "../../_components/nav-user";
 
 import {cookies} from "next/headers";
 
-import ComingSoon from "@/app/(employee-relations)/employee-relations/_components/ComingSoon";
+import UndertimeModule from "@/modules/employee-relations/application/undertime/UndertimeModule";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +41,15 @@ function pickString(obj: Record<string, unknown> | null | undefined, keys: strin
         if (typeof v === "string" && v.trim()) return v.trim();
     }
     return "";
+}
+
+function pickNumber(obj: Record<string, unknown> | null | undefined, keys: string[]): number | null {
+    for (const k of keys) {
+        const v = obj?.[k];
+        if (typeof v === "number") return v;
+        if (typeof v === "string" && !isNaN(parseInt(v))) return parseInt(v);
+    }
+    return null;
 }
 
 function buildHeaderUserFromToken(token: string | null | undefined) {
@@ -77,6 +86,9 @@ export default async function Page() {
     const token = cookieStore.get(COOKIE_NAME)?.value ?? null;
 
     const headerUser = buildHeaderUserFromToken(token);
+    const payload = token ? decodeJwtPayload(token) : null;
+    const userId = pickNumber(payload, ["user_id", "userId", "id", "sub"]) ?? 0;
+    const departmentId = pickNumber(payload, ["user_department", "department_id", "departmentId"]);
 
     return (
         // ✅ This fills the RIGHT column provided by SidebarInset (which is now fixed-height).
@@ -121,7 +133,7 @@ export default async function Page() {
 
             {/* ✅ Only content scrolls inside RIGHT column */}
             <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4">
-                <ComingSoon/>
+                <UndertimeModule userId={userId} departmentId={departmentId} />
             </main>
         </div>
     );

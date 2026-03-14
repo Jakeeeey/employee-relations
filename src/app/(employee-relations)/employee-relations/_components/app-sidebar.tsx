@@ -90,7 +90,7 @@ export function AppSidebar({
                                 <div className="grid flex-1 text-left text-sm leading-tight">
                                     <span className="truncate font-medium">VOS Web</span>
                                     <span className="truncate text-xs text-muted-foreground">
-                                        Customer Relationship Management
+                                        Employee Relations
                                     </span>
                                 </div>
                             </Link>
