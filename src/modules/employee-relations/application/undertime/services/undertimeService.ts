@@ -15,6 +15,22 @@ export class UndertimeService {
     return headers;
   }
 
+  private static async getDepartmentId(userId: number): Promise<number | null> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/items/user?filter[user_id][_eq]=${userId}&fields=user_department`, {
+        method: "GET",
+        headers: this.getHeaders(),
+        cache: "no-store",
+      });
+      if (!res.ok) return null;
+      const { data } = await res.json();
+      if (!Array.isArray(data) || data.length === 0) return null;
+      return data[0].user_department ? parseInt(String(data[0].user_department)) : null;
+    } catch {
+      return null;
+    }
+  }
+
   static async fetchAll(): Promise<UndertimeRequest[]> {
     const res = await fetch(`${API_BASE_URL}/items/undertime_request?sort=-filed_at&limit=-1`, {
       method: "GET",
@@ -32,12 +48,15 @@ export class UndertimeService {
     return (Array.isArray(data) ? data : []).map((item: Record<string, unknown>) => ({
       ...item,
       duration_minutes: item.duration_minutes ? parseInt(String(item.duration_minutes)) : 0,
+      department_id: item.department_id ? parseInt(String(item.department_id)) : null,
     })) as UndertimeRequest[];
   }
 
   static async create(data: CreateUndertimeInput): Promise<UndertimeRequest> {
+    const deptId = await this.getDepartmentId(data.user_id);
     const payload = {
       ...data,
+      department_id: deptId ?? data.department_id,
       created_by: data.user_id, // automatically set the creator
     };
 
@@ -60,8 +79,10 @@ export class UndertimeService {
   }
 
   static async update(id: number, data: UpdateUndertimeInput, updatedByUserId?: number): Promise<UndertimeRequest> {
+    const deptId = data.user_id ? await this.getDepartmentId(data.user_id) : null;
     const payload = {
       ...data,
+      ...(deptId ? { department_id: deptId } : {}),
       ...(updatedByUserId ? { updated_by: updatedByUserId } : {}),
     };
 

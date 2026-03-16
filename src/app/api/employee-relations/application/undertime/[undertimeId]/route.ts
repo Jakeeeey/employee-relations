@@ -7,13 +7,13 @@ import { ZodError } from "zod";
 const COOKIE_NAME = "vos_access_token";
 
 function decodeJwtPayload(token: string) {
-    try {
-        const parts = token.split(".");
-        const payload = Buffer.from(parts[1], "base64").toString("utf8");
-        return JSON.parse(payload);
-    } catch {
-        return null;
-    }
+  try {
+    const parts = token.split(".");
+    const payload = Buffer.from(parts[1], "base64").toString("utf8");
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
 }
 
 export async function PATCH(
@@ -32,7 +32,7 @@ export async function PATCH(
     const validatedData = UpdateUndertimeSchema.parse(body);
 
     const payload = decodeJwtPayload(token);
-    const userId = payload?.user_id || payload?.userId || payload?.id;
+    const userId = payload?.sub || payload?.user_id || payload?.userId || payload?.id;
 
     // Use token identity as updated_by
     const updatedRequest = await UndertimeService.update(parseInt(undertimeId), validatedData, userId);
