@@ -20,9 +20,9 @@ export async function GET() {
     const strictUserId = payload?.user_id || payload?.userId || payload?.id;
 
     const leaves = await LeaveService.fetchAll();
-    
+
     // Strict server-side isolation based on the securely decoded JWT token
-    const filteredLeaves = strictUserId 
+    const filteredLeaves = strictUserId
       ? leaves.filter((l: { user_id: number | string }) => String(l.user_id) === String(strictUserId))
       : [];
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const validatedData = CreateLeaveSchema.parse(body);
-    
+
     const newLeave = await LeaveService.create(validatedData);
     return NextResponse.json({ ok: true, data: newLeave });
   } catch (error: unknown) {

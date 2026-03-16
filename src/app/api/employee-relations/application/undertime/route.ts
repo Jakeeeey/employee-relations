@@ -18,9 +18,9 @@ export async function GET() {
     const strictUserId = payload?.user_id || payload?.userId || payload?.id;
 
     const requests = await UndertimeService.fetchAll();
-    
+
     // Strict server-side isolation based on the securely decoded JWT token
-    const filteredRequests = strictUserId 
+    const filteredRequests = strictUserId
       ? requests.filter((r: { user_id: number | string }) => String(r.user_id) === String(strictUserId))
       : [];
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const validatedData = CreateUndertimeSchema.parse(body);
-    
+
     const newRequest = await UndertimeService.create(validatedData);
     return NextResponse.json({ ok: true, data: newRequest });
   } catch (error: unknown) {
