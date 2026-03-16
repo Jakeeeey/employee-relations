@@ -32,7 +32,7 @@ export async function PATCH(
     const validatedData = UpdateUndertimeSchema.parse(body);
 
     const payload = decodeJwtPayload(token);
-    const userId = payload?.user_id || payload?.userId || payload?.id;
+    const userId = payload?.sub || payload?.user_id || payload?.userId || payload?.id;
 
     // Use token identity as updated_by
     const updatedRequest = await UndertimeService.update(parseInt(undertimeId), validatedData, userId);

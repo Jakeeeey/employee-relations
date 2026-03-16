@@ -15,7 +15,7 @@ export async function GET() {
   try {
     const payloadBuffer = Buffer.from(token.split(".")[1], "base64");
     const payload = JSON.parse(payloadBuffer.toString("utf8"));
-    const strictUserId = payload?.user_id || payload?.userId || payload?.id;
+    const strictUserId = payload?.sub || payload?.user_id || payload?.userId || payload?.id;
 
     const requests = await OvertimeService.fetchAll();
 
