@@ -7,13 +7,13 @@ import { ZodError } from "zod";
 const COOKIE_NAME = "vos_access_token";
 
 function decodeJwtPayload(token: string) {
-  try {
-    const parts = token.split(".");
-    const payload = Buffer.from(parts[1], "base64").toString("utf8");
-    return JSON.parse(payload);
-  } catch {
-    return null;
-  }
+    try {
+        const parts = token.split(".");
+        const payload = Buffer.from(parts[1], "base64").toString("utf8");
+        return JSON.parse(payload);
+    } catch {
+        return null;
+    }
 }
 
 export async function PATCH(
