@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { UndertimeTable } from "./components/UndertimeTable";
 import { UndertimeForm } from "./components/UndertimeForm";
 import { useUndertime } from "./hooks/useUndertime";
 import { UndertimeRequest, CreateUndertimeInput } from "./types";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +24,9 @@ interface UndertimeModuleProps {
 export default function UndertimeModule({ userId, departmentId }: UndertimeModuleProps) {
   const { requests, isLoading, createRequest, updateRequest } = useUndertime(userId);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<UndertimeRequest | null>(null);
+  const [viewingRequest, setViewingRequest] = useState<UndertimeRequest | null>(null);
 
   const handleOpenCreate = () => {
     setEditingRequest(null);
@@ -34,9 +38,29 @@ export default function UndertimeModule({ userId, departmentId }: UndertimeModul
     setIsDialogOpen(true);
   };
 
+  const handleOpenView = (request: UndertimeRequest) => {
+    setViewingRequest(request);
+    setIsViewDialogOpen(true);
+  };
+
   const onSubmit = async (data: CreateUndertimeInput) => {
     const payload = { ...data, user_id: userId, department_id: departmentId };
     
+    const isDuplicate = requests.some(r => {
+      // Don't check against the current record being edited
+      if (editingRequest && r.undertime_id === editingRequest.undertime_id) return false;
+      const existingDate = r.request_date ? r.request_date.substring(0, 10) : null;
+      const newDate = payload.request_date ? payload.request_date.substring(0, 10) : null;
+      return existingDate === newDate && r.status !== "rejected" && r.status !== "cancelled";
+    });
+
+    if (isDuplicate) {
+      toast.error("Duplicate Request", {
+        description: "You already have an undertime request for this date.",
+      });
+      return;
+    }
+
     if (editingRequest) {
       await updateRequest(editingRequest.undertime_id!, payload);
     } else {
@@ -61,7 +85,7 @@ export default function UndertimeModule({ userId, departmentId }: UndertimeModul
       </div>
 
       <div className="rounded-md border bg-card">
-        <UndertimeTable data={requests} onEdit={handleOpenEdit} />
+        <UndertimeTable data={requests} onEdit={handleOpenEdit} onView={handleOpenView} />
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -76,6 +100,54 @@ export default function UndertimeModule({ userId, departmentId }: UndertimeModul
             onSubmit={onSubmit}
             isLoading={isLoading}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Undertime Request Details</DialogTitle>
+          </DialogHeader>
+          {viewingRequest && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="font-semibold text-muted-foreground">Date</p>
+                  <p>{viewingRequest.request_date ? format(new Date(viewingRequest.request_date), "PPP") : "-"}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-muted-foreground">Status</p>
+                  <p className="capitalize">{viewingRequest.status}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-muted-foreground">Scheduled Timeout</p>
+                  <p>{viewingRequest.sched_timeout?.substring(0, 5)}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-muted-foreground">Undertime Length</p>
+                  <p>{viewingRequest.duration_minutes} Minutes</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-muted-foreground">Requested Timeout</p>
+                  <p>{viewingRequest.actual_timeout?.substring(0, 5)}</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="font-semibold text-muted-foreground text-sm">Reason</p>
+                <p className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3">
+                  {viewingRequest.reason}
+                </p>
+              </div>
+              {viewingRequest.remarks && (
+                <div className="space-y-1">
+                  <p className="font-semibold text-muted-foreground text-sm">Remarks</p>
+                  <p className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3 italic">
+                    {viewingRequest.remarks}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

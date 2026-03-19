@@ -42,9 +42,9 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
 
   useEffect(() => {
     if (leaveStart && leaveEnd) {
-      const start = new Date(leaveStart);
-      const end = new Date(leaveEnd);
-      if (end >= start) {
+      if (leaveEnd >= leaveStart) {
+        const start = new Date(leaveStart);
+        const end = new Date(leaveEnd);
         const diff = differenceInDays(end, start) + 1;
         setValue("total_days", diff, { shouldValidate: true });
       } else {
@@ -111,7 +111,7 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
                     <Calendar
                       mode="single"
                       selected={field.value ? new Date(field.value) : undefined}
-                      onSelect={(date) => field.onChange(date?.toISOString())}
+                      onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                       initialFocus
                     />
                   </PopoverContent>
@@ -150,8 +150,8 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
                     <Calendar
                       mode="single"
                       selected={field.value ? new Date(field.value) : undefined}
-                      onSelect={(date) => field.onChange(date?.toISOString())}
-                      disabled={(date) => (leaveStart ? date < new Date(leaveStart) : false)}
+                      onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                      disabled={(date) => (leaveStart ? format(date, "yyyy-MM-dd") < leaveStart : false)}
                       initialFocus
                     />
                   </PopoverContent>
