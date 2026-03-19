@@ -5,15 +5,23 @@ import { DataTable } from "@/components/ui/data-table";
 import { UndertimeRequest } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2 } from "lucide-react";
+import { Edit2, Eye, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 
 interface UndertimeTableProps {
   data: UndertimeRequest[];
   onEdit: (request: UndertimeRequest) => void;
+  onView: (request: UndertimeRequest) => void;
 }
 
-export function UndertimeTable({ data, onEdit }: UndertimeTableProps) {
+export function UndertimeTable({ data, onEdit, onView }: UndertimeTableProps) {
   const columns: ColumnDef<UndertimeRequest>[] = [
     {
       accessorKey: "request_date",
@@ -73,14 +81,26 @@ export function UndertimeTable({ data, onEdit }: UndertimeTableProps) {
         const isPending = request.status === "pending";
 
         return (
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!isPending}
-            onClick={() => onEdit(request)}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onView(request)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                disabled={!isPending} 
+                onClick={() => onEdit(request)}
+              >
+                <Edit2 className="mr-2 h-4 w-4" />
+                Edit Request
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
       },
     },

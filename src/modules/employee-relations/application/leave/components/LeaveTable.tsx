@@ -5,15 +5,23 @@ import { DataTable } from "@/components/ui/data-table";
 import { LeaveRequest } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2 } from "lucide-react";
+import { Edit2, Eye, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 
 interface LeaveTableProps {
   data: LeaveRequest[];
   onEdit: (leave: LeaveRequest) => void;
+  onView: (leave: LeaveRequest) => void;
 }
 
-export function LeaveTable({ data, onEdit }: LeaveTableProps) {
+export function LeaveTable({ data, onEdit, onView }: LeaveTableProps) {
   const columns: ColumnDef<LeaveRequest>[] = [
     {
       accessorKey: "leave_type",
@@ -72,14 +80,26 @@ export function LeaveTable({ data, onEdit }: LeaveTableProps) {
         const isPending = leave.status === "pending";
 
         return (
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!isPending}
-            onClick={() => onEdit(leave)}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onView(leave)}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                disabled={!isPending} 
+                onClick={() => onEdit(leave)}
+              >
+                <Edit2 className="mr-2 h-4 w-4" />
+                Edit Request
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
       },
     },
