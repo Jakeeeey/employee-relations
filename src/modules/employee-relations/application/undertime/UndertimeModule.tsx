@@ -134,14 +134,14 @@ export default function UndertimeModule({ userId, departmentId }: UndertimeModul
               </div>
               <div className="space-y-1">
                 <p className="font-semibold text-muted-foreground text-sm">Reason</p>
-                <p className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3">
+                <p className="text-sm whitespace-pre-wrap break-all rounded-md bg-muted p-3">
                   {viewingRequest.reason}
                 </p>
               </div>
               {viewingRequest.remarks && (
                 <div className="space-y-1">
                   <p className="font-semibold text-muted-foreground text-sm">Remarks</p>
-                  <p className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3 italic">
+                  <p className="text-sm whitespace-pre-wrap break-all rounded-md bg-muted p-3 italic">
                     {viewingRequest.remarks}
                   </p>
                 </div>
