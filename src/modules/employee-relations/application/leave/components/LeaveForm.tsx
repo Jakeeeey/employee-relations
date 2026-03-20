@@ -43,10 +43,18 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
   useEffect(() => {
     if (leaveStart && leaveEnd) {
       if (leaveEnd >= leaveStart) {
-        const start = new Date(leaveStart);
+        let count = 0;
+        const current = new Date(leaveStart);
         const end = new Date(leaveEnd);
-        const diff = differenceInDays(end, start) + 1;
-        setValue("total_days", diff, { shouldValidate: true });
+        
+        while (current <= end) {
+          if (current.getDay() !== 0) { // 0 = Sunday
+            count++;
+          }
+          current.setDate(current.getDate() + 1);
+        }
+        
+        setValue("total_days", count, { shouldValidate: true });
       } else {
         setValue("total_days", 0, { shouldValidate: true });
       }
@@ -112,6 +120,7 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
                       mode="single"
                       selected={field.value ? new Date(field.value) : undefined}
                       onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                      disabled={(date) => date.getDay() === 0}
                       initialFocus
                     />
                   </PopoverContent>
@@ -151,7 +160,9 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
                       mode="single"
                       selected={field.value ? new Date(field.value) : undefined}
                       onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
-                      disabled={(date) => (leaveStart ? format(date, "yyyy-MM-dd") < leaveStart : false)}
+                      disabled={(date) => 
+                        date.getDay() === 0 || (leaveStart ? format(date, "yyyy-MM-dd") < leaveStart : false)
+                      }
                       initialFocus
                     />
                   </PopoverContent>
