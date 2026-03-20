@@ -24,7 +24,7 @@ export const LeaveRequestSchema = z.object({
 
 export type LeaveRequest = z.infer<typeof LeaveRequestSchema>;
 
-export const CreateLeaveSchema = LeaveRequestSchema.omit({
+const BaseCreateLeaveSchema = LeaveRequestSchema.omit({
   leave_id: true,
   status: true,
   approver_id: true,
@@ -34,7 +34,40 @@ export const CreateLeaveSchema = LeaveRequestSchema.omit({
   total_days: z.number().max(5, "Each leave request is limited to 5 days"),
 });
 
+const sundayValidation = (dateStr: string | null | undefined) => {
+  if (!dateStr) return true;
+  const date = new Date(dateStr);
+  return date.getDay() !== 0; // 0 is Sunday
+};
+
+export const CreateLeaveSchema = BaseCreateLeaveSchema.refine(
+  (data) => sundayValidation(data.leave_start),
+  {
+    message: "Start date cannot be a Sunday",
+    path: ["leave_start"],
+  }
+).refine(
+  (data) => sundayValidation(data.leave_end),
+  {
+    message: "End date cannot be a Sunday",
+    path: ["leave_end"],
+  }
+);
+
 export type CreateLeaveInput = z.infer<typeof CreateLeaveSchema>;
 
-export const UpdateLeaveSchema = CreateLeaveSchema.partial();
+export const UpdateLeaveSchema = BaseCreateLeaveSchema.partial().refine(
+  (data) => sundayValidation(data.leave_start),
+  {
+    message: "Start date cannot be a Sunday",
+    path: ["leave_start"],
+  }
+).refine(
+  (data) => sundayValidation(data.leave_end),
+  {
+    message: "End date cannot be a Sunday",
+    path: ["leave_end"],
+  }
+);
+
 export type UpdateLeaveInput = z.infer<typeof UpdateLeaveSchema>;

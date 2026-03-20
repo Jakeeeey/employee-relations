@@ -142,14 +142,14 @@ export default function LeaveModule({ userId, departmentId }: LeaveModuleProps) 
               </div>
               <div className="space-y-1">
                 <p className="font-semibold text-muted-foreground text-sm">Reason</p>
-                <p className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3">
+                <p className="text-sm whitespace-pre-wrap break-all rounded-md bg-muted p-3">
                   {viewingLeave.reason}
                 </p>
               </div>
               {viewingLeave.remarks && (
                 <div className="space-y-1">
                   <p className="font-semibold text-muted-foreground text-sm">Remarks</p>
-                  <p className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3 italic">
+                  <p className="text-sm whitespace-pre-wrap break-all rounded-md bg-muted p-3 italic">
                     {viewingLeave.remarks}
                   </p>
                 </div>
