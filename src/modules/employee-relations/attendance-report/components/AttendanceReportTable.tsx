@@ -107,7 +107,11 @@ export function AttendanceReportTable({ data }: AttendanceReportTableProps) {
                   <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 data-[state=selected]:bg-slate-50 dark:data-[state=selected]:bg-slate-800/30 border-b border-slate-200 dark:border-slate-700"
+                      className={`${
+                        isAbsent 
+                          ? "bg-red-200 hover:bg-red-300 dark:bg-red-900/50 dark:hover:bg-red-900/60" 
+                          : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
+                      } data-[state=selected]:bg-slate-50 dark:data-[state=selected]:bg-slate-800/30 border-b border-slate-200 dark:border-slate-700`}
                     >
                     {isAbsent ? (
                       <>
