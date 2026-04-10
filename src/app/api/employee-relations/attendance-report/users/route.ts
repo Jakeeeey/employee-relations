@@ -2,6 +2,28 @@ import { NextResponse } from "next/server";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+interface AttendanceLog {
+  user_id: number;
+}
+
+interface User {
+  user_id: number;
+  user_fname: string;
+  user_mname: string;
+  user_lname: string;
+  user_email: string;
+  user_department: number;
+}
+
+interface Department {
+  department_id: number;
+  department_name: string;
+}
+
+interface EnrichedUser extends User {
+  department_name: string | null;
+}
+
 function getHeaders() {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -42,7 +64,7 @@ export async function GET() {
     );
 
     const attendanceLogs = attendanceLogsResponse.data || [];
-    const uniqueUserIds = [...new Set(attendanceLogs.map((log: any) => log.user_id))];
+    const uniqueUserIds = [...new Set(attendanceLogs.map((log: AttendanceLog) => log.user_id))];
 
     if (uniqueUserIds.length === 0) {
       return NextResponse.json({ users: [] }, { status: 200 });
@@ -61,17 +83,17 @@ export async function GET() {
     const filteredUsers = usersData.filter((u) => u !== null);
 
     // Fetch department names for each user
-    const deptIds = [...new Set(filteredUsers.map((u: any) => u.user_department).filter(Boolean))];
+    const deptIds = [...new Set(filteredUsers.map((u: User) => u.user_department).filter(Boolean))];
     const deptsPromises = deptIds.map((deptId) =>
       directusFetch(`/items/department/${deptId}?fields=department_id,department_name`)
         .then((res) => res.data)
         .catch(() => null)
     );
     const deptsData = await Promise.all(deptsPromises);
-    const deptsMap = new Map(deptsData.filter((d) => d).map((d: any) => [d.department_id, d.department_name]));
+    const deptsMap = new Map(deptsData.filter((d) => d).map((d: Department) => [d.department_id, d.department_name]));
 
     // Enrich users with department names
-    const enrichedUsers = filteredUsers.map((user: any) => ({
+    const enrichedUsers = filteredUsers.map((user: User): EnrichedUser => ({
       ...user,
       department_name: user.user_department ? deptsMap.get(user.user_department) || "N/A" : null,
     }));

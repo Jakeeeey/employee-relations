@@ -12,7 +12,6 @@ import { NavUser } from "../_components/nav-user";
 
 import { cookies } from "next/headers";
 import AttendanceReportModule from "@/modules/employee-relations/attendance-report/AttendanceReportModule";
-import ComingSoon from "@/app/(employee-relations)/employee-relations/_components/ComingSoon";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

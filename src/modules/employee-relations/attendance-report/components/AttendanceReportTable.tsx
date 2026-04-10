@@ -2,7 +2,6 @@
 
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { AttendanceLog } from "../type";
-import { Badge } from "@/components/ui/badge";
 import { format, isValid } from "date-fns";
 import {
   Table,
@@ -66,6 +65,7 @@ export function AttendanceReportTable({ data }: AttendanceReportTableProps) {
     },
   ];
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

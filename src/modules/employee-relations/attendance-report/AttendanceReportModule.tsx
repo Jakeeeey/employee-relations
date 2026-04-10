@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAttendanceReport } from "./hooks/useAttendanceReport";
 import { AttendanceReportTable } from "./components/AttendanceReportTable";
 import {
