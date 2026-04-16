@@ -12,7 +12,7 @@ import { NavUser } from "@/components/shared/app-sidebar/nav-user";
 
 import { cookies } from "next/headers";
 
-import ComingSoon from "@/app/(employee-relations)/er/_components/ComingSoon";
+import AttendanceReportModule from "@/modules/er/attendance-report/AttendanceReportModule";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
