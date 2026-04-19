@@ -12,7 +12,7 @@ import { NavUser } from "@/components/shared/app-sidebar/nav-user";
 
 import { cookies } from "next/headers";
 
-import ComingSoon from "@/app/(employee-relations)/er/_components/ComingSoon";
+import AttendanceReportModule from "@/modules/er/attendance-report/AttendanceReportModule";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,12 +71,38 @@ function buildHeaderUserFromToken(token: string | null | undefined) {
     };
 }
 
+function extractUserIdFromToken(token: string | null | undefined): number | null {
+    const payload = token ? decodeJwtPayload(token) : null;
+    if (!payload) return null;
+
+    // Check various possible field names for user ID
+    const userId = payload["user_id"] || 
+                   payload["userId"] || 
+                   payload["id"] ||
+                   payload["ID"] ||
+                   payload["User_ID"] ||
+                   payload["sub"];
+    
+    if (typeof userId === "number") return userId;
+    if (typeof userId === "string") {
+        const parsed = parseInt(userId, 10);
+        return isNaN(parsed) ? null : parsed;
+    }
+    
+    // Debug: log payload to see what fields are available
+    console.log("Token payload:", payload);
+    console.log("Available keys:", Object.keys(payload));
+    
+    return null;
+}
+
 export default async function Page() {
     // ✅ Next.js 16: cookies() is async
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value ?? null;
 
     const headerUser = buildHeaderUserFromToken(token);
+    const userId = extractUserIdFromToken(token);
 
     return (
         // ✅ This fills the RIGHT column provided by SidebarInset (which is now fixed-height).
@@ -115,7 +141,13 @@ export default async function Page() {
 
             {/* ✅ Only content scrolls inside RIGHT column */}
             <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4">
-                <ComingSoon />
+                {userId ? (
+                    <AttendanceReportModule userId={userId} />
+                ) : (
+                    <div className="flex items-center justify-center p-8">
+                        <p className="text-muted-foreground">Unable to load user information</p>
+                    </div>
+                )}
             </main>
         </div>
     );
