@@ -27,7 +27,7 @@ export function useAttendanceReport(userId?: number): UseAttendanceReportReturn 
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/employee-relations/attendance-report?userId=${userId}`);
+      const res = await fetch(`/api/er/attendance-report?userId=${userId}`);
       const data = await res.json();
 
       if (!res.ok) {

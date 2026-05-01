@@ -3,7 +3,7 @@ import type { AttendanceLog, User } from "../type";
 export async function fetchAttendanceReport(userId: number) {
   try {
     const response = await fetch(
-      `/api/employee-relations/attendance-report?userId=${userId}`,
+      `/api/er/attendance-report?userId=${userId}`,
       {
         credentials: "include",
       }
