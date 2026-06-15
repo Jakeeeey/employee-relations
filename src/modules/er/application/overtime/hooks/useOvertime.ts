@@ -12,8 +12,8 @@ export function useOvertime(userId?: number) {
     setError(null);
     try {
       const url = userId 
-        ? `/api/employee-relations/application/overtime?userId=${userId}`
-        : "/api/employee-relations/application/overtime";
+        ? `/api/er/application/overtime?userId=${userId}`
+        : "/api/er/application/overtime";
         
       const res = await fetch(url);
       const data = await res.json();
@@ -35,7 +35,7 @@ export function useOvertime(userId?: number) {
   const createRequest = async (data: CreateOvertimeInput) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/employee-relations/application/overtime", {
+      const res = await fetch("/api/er/application/overtime", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -58,7 +58,7 @@ export function useOvertime(userId?: number) {
   const updateRequest = async (id: number, data: UpdateOvertimeInput) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/employee-relations/application/overtime/${id}`, {
+      const res = await fetch(`/api/er/application/overtime/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
