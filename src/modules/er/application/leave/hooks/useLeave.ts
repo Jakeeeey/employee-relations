@@ -14,8 +14,8 @@ export function useLeave(userId?: number) {
     setError(null);
     try {
       const url = userId 
-        ? `/api/employee-relations/application/leave?userId=${userId}`
-        : "/api/employee-relations/application/leave";
+        ? `/api/er/application/leave?userId=${userId}`
+        : "/api/er/application/leave";
         
       const res = await fetch(url);
       const data = await res.json();
@@ -33,7 +33,7 @@ export function useLeave(userId?: number) {
   const createLeave = async (input: CreateLeaveInput) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/employee-relations/application/leave", {
+      const res = await fetch("/api/er/application/leave", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
@@ -56,7 +56,7 @@ export function useLeave(userId?: number) {
   const updateLeave = async (id: number, input: UpdateLeaveInput) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/employee-relations/application/leave/${id}`, {
+      const res = await fetch(`/api/er/application/leave/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),

@@ -16,10 +16,13 @@ export const LeaveRequestSchema = z.object({
   total_days: z.number().default(0),
   reason: z.string().min(1, "Reason is required"),
   remarks: z.string().nullable().optional(),
+  override_attachment_uuid: z.string().nullable().optional(),
   status: LeaveStatusEnum.default("pending"),
+  current_approval_level: z.number().default(1).optional(),
   approver_id: z.number().nullable().optional(),
   approved_at: z.string().nullable().optional(),
   filed_at: z.string().optional(),
+  emp_attatchment_uuid: z.string().nullable().optional(),
 });
 
 export type LeaveRequest = z.infer<typeof LeaveRequestSchema>;
