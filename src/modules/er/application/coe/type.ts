@@ -20,6 +20,7 @@ export const COERequestSchema = z.object({
   approved_by: z.number().nullable().optional(),
   approval_date: z.string().nullable().optional(),
   ecopy_file_url: z.string().nullable().optional(),
+  doc_title: z.string().nullable().optional(),
   hr_remarks: z.string().nullable().optional(),
   updated_at: z.string().nullable().optional(),
 });

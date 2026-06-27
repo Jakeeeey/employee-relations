@@ -17,6 +17,7 @@ export class COEService {
 
   /**
    * Fetches COE requests, optionally filtered by employee_id.
+   * Enriches each request with the document title from Directus file metadata.
    * @param {number} [employeeId] - When provided, filters results to this employee only.
    * @returns {Promise<COERequest[]>} Sorted by request_date descending.
    */
@@ -44,8 +45,51 @@ export class COEService {
 
     const payload = await res.json();
     const data = payload.data || payload || [];
+    const requests = (Array.isArray(data) ? data : []) as COERequest[];
 
-    return (Array.isArray(data) ? data : []) as COERequest[];
+    const uuids = new Set<string>();
+    for (const req of requests) {
+      if (req.ecopy_file_url) {
+        const segment = req.ecopy_file_url.trim().split("/").pop()?.split("?")[0] ?? "";
+        if (/^[0-9a-fA-F-]{36}$/.test(segment)) {
+          uuids.add(segment);
+        }
+      }
+    }
+
+    if (uuids.size > 0) {
+      const entries = await Promise.all(
+        Array.from(uuids).map(async (uuid) => {
+          try {
+            const fres = await fetch(`${API_BASE_URL}/files/${uuid}`, {
+              headers: this.getHeaders(),
+              cache: "no-store",
+            });
+            if (!fres.ok) return null;
+            const fdata = await fres.json();
+            const fd = fdata.data || fdata;
+            const title = fd.filename_download || null;
+            return { uuid, title };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const titleMap: Record<string, string | null> = {};
+      for (const entry of entries) {
+        if (entry) titleMap[entry.uuid] = entry.title;
+      }
+
+      for (const req of requests) {
+        if (req.ecopy_file_url) {
+          const segment = req.ecopy_file_url.trim().split("/").pop()?.split("?")[0] ?? "";
+          req.doc_title = titleMap[segment] ?? null;
+        }
+      }
+    }
+
+    return requests;
   }
 
   /**

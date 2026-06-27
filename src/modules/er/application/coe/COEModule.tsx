@@ -45,13 +45,6 @@ function formatStatus(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 }
 
-function getDocTitle(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const filename = url.split("/").pop()?.split("?")[0]?.split("#")[0] ?? "";
-  const name = filename.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
-  return name || null;
-}
-
 function isPreviewable(status: string | null | undefined): boolean {
   const s = (status || "").toUpperCase();
   return s === "APPROVED" || s === "RELEASED";
@@ -92,12 +85,11 @@ export default function COEModule({ userId }: COEModuleProps) {
     setIsViewDialogOpen(true);
   };
 
-  const handlePreview = (url: string) => {
+  const handlePreview = (url: string, title?: string | null) => {
     const proxied = getFileProxyUrl(url);
     if (!proxied) return;
-    const title = getDocTitle(url) ?? "Document";
     setPreviewUrl(proxied);
-    setPreviewTitle(title);
+    setPreviewTitle(title || "Document");
     setIsPreviewOpen(true);
   };
 
@@ -217,7 +209,6 @@ export default function COEModule({ userId }: COEModuleProps) {
               <div className="rounded-md border border-slate-200 dark:border-slate-700 h-96">
                 <COETable
                   data={paginatedRequests}
-                  onEdit={handleOpenEdit}
                   onView={handleOpenView}
                   onPreview={handlePreview}
                 />
@@ -282,14 +273,6 @@ export default function COEModule({ userId }: COEModuleProps) {
                 </DialogTitle>
                 <p className="text-xs font-medium opacity-70">PDF Document</p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => { setIsPreviewOpen(false); setPreviewUrl(null); }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
 
@@ -382,16 +365,16 @@ export default function COEModule({ userId }: COEModuleProps) {
                     <button
                       type="button"
                       onClick={() => {
-                        handlePreview(viewingRequest.ecopy_file_url!);
+                        handlePreview(viewingRequest.ecopy_file_url!, viewingRequest.doc_title);
                       }}
                       className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
                     >
                       <FileText className="h-3.5 w-3.5" />
-                      {getDocTitle(viewingRequest.ecopy_file_url)}
+                      {viewingRequest.doc_title}
                     </button>
                   ) : (
                     <span className="text-sm text-muted-foreground">
-                      {getDocTitle(viewingRequest.ecopy_file_url)}
+                      {viewingRequest.doc_title}
                     </span>
                   )}
                 </div>

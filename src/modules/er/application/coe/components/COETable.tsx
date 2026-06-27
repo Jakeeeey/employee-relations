@@ -4,14 +4,8 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import { COERequest } from "../type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2, Eye, FileText, MoreHorizontal } from "lucide-react";
+import { Eye, FileText } from "lucide-react";
 import { format, isValid } from "date-fns";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -43,13 +37,6 @@ function formatDate(val: string | null | undefined, formatStr: string): string {
   }
 }
 
-function getDocTitle(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const filename = url.split("/").pop()?.split("?")[0]?.split("#")[0] ?? "";
-  const name = filename.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
-  return name || null;
-}
-
 function isPreviewable(status: string | null | undefined): boolean {
   const s = (status || "").toUpperCase();
   return s === "APPROVED" || s === "RELEASED";
@@ -57,12 +44,11 @@ function isPreviewable(status: string | null | undefined): boolean {
 
 interface COETableProps {
   data: COERequest[];
-  onEdit: (request: COERequest) => void;
   onView: (request: COERequest) => void;
-  onPreview: (url: string) => void;
+  onPreview: (url: string, title?: string | null) => void;
 }
 
-export function COETable({ data, onEdit, onView, onPreview }: COETableProps) {
+export function COETable({ data, onView, onPreview }: COETableProps) {
   const columns: ColumnDef<COERequest>[] = [
     {
       accessorKey: "purpose",
@@ -96,11 +82,11 @@ export function COETable({ data, onEdit, onView, onPreview }: COETableProps) {
         const url = request.ecopy_file_url;
         if (!isPreviewable(request.status) || !url) return <span className="text-muted-foreground">-</span>;
 
-        const title = getDocTitle(url);
+        const title = request.doc_title;
         return (
           <button
             type="button"
-            onClick={() => onPreview(url)}
+            onClick={() => onPreview(url, request.doc_title)}
             className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline truncate max-w-[180px]"
             title={title ?? ""}
           >
@@ -115,29 +101,10 @@ export function COETable({ data, onEdit, onView, onPreview }: COETableProps) {
       header: "Actions",
       cell: ({ row }) => {
         const request = row.original;
-        const isPending = request.status?.toUpperCase() === "PENDING";
-
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onView(request)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!isPending}
-                onClick={() => onEdit(request)}
-              >
-                <Edit2 className="mr-2 h-4 w-4" />
-                Edit Request
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="ghost" size="icon" onClick={() => onView(request)}>
+            <Eye className="h-4 w-4" />
+          </Button>
         );
       },
     },
