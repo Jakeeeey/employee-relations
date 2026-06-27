@@ -7,7 +7,11 @@ import { useCOE } from "./hooks/useCOE";
 import { COERequest } from "./type";
 import { getFileProxyUrl } from "./fileProxy";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
 import { Plus, RotateCcw, AlertCircle, Download, FileText, Loader2, X, ArrowRight, Calendar, Clock, AlertTriangle } from "lucide-react";
+=======
+import { Plus, RotateCcw, AlertCircle, Download, FileText, Loader2, X } from "lucide-react";
+>>>>>>> master
 import { format } from "date-fns";
 import {
   Dialog,
@@ -15,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+<<<<<<< HEAD
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +30,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+=======
+>>>>>>> master
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -43,12 +50,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+<<<<<<< HEAD
 const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline" | "success"> = {
   PENDING: "secondary",
   APPROVED: "default",
   RELEASED: "success",
   REJECTED: "destructive",
   CANCELLED: "secondary",
+=======
+const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  PENDING: "secondary",
+  APPROVED: "default",
+  RELEASED: "default",
+  REJECTED: "destructive",
+  CANCELLED: "destructive",
+>>>>>>> master
 };
 
 function formatStatus(status: string): string {
@@ -79,8 +95,11 @@ export default function COEModule({ userId }: COEModuleProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+<<<<<<< HEAD
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+=======
+>>>>>>> master
 
   const handleOpenCreate = () => {
     setEditingRequest(null);
@@ -109,6 +128,7 @@ export default function COEModule({ userId }: COEModuleProps) {
     setIsDialogOpen(false);
   };
 
+<<<<<<< HEAD
   const handleCancel = async () => {
     if (!viewingRequest?.id) return;
     setIsCancelling(true);
@@ -123,6 +143,8 @@ export default function COEModule({ userId }: COEModuleProps) {
     }
   };
 
+=======
+>>>>>>> master
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -231,6 +253,10 @@ export default function COEModule({ userId }: COEModuleProps) {
                 <COETable
                   data={paginatedRequests}
                   onView={handleOpenView}
+<<<<<<< HEAD
+=======
+                  onPreview={handlePreview}
+>>>>>>> master
                 />
               </div>
 
@@ -342,6 +368,7 @@ export default function COEModule({ userId }: COEModuleProps) {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+<<<<<<< HEAD
         <DialogContent showCloseButton={false} className="sm:max-w-lg overflow-hidden p-0 rounded-2xl">
           {viewingRequest && (
             <>
@@ -515,6 +542,77 @@ export default function COEModule({ userId }: COEModuleProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+=======
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>COE Request Details</DialogTitle>
+          </DialogHeader>
+          {viewingRequest && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="font-semibold text-muted-foreground">Purpose</p>
+                  <p>{viewingRequest.purpose}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-muted-foreground">Status</p>
+                  <p>
+                    <Badge variant={statusVariantMap[viewingRequest.status?.toUpperCase() ?? ""] ?? "outline"}>
+                      {formatStatus(viewingRequest.status ?? "PENDING")}
+                    </Badge>
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold text-muted-foreground">Request Date</p>
+                  <p>
+                    {viewingRequest.request_date
+                      ? format(new Date(viewingRequest.request_date), "PPP")
+                      : "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold text-muted-foreground">Approval Date</p>
+                  <p>
+                    {viewingRequest.approval_date
+                      ? format(new Date(viewingRequest.approval_date), "PPP")
+                      : "-"}
+                  </p>
+                </div>
+              </div>
+              {viewingRequest.ecopy_file_url && (
+                <div className="space-y-1">
+                  <p className="font-semibold text-muted-foreground text-sm">E-Copy</p>
+                  {isPreviewable(viewingRequest.status) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handlePreview(viewingRequest.ecopy_file_url!, viewingRequest.doc_title);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      {viewingRequest.doc_title}
+                    </button>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      {viewingRequest.doc_title}
+                    </span>
+                  )}
+                </div>
+              )}
+              {viewingRequest.hr_remarks && (
+                <div className="space-y-1">
+                  <p className="font-semibold text-muted-foreground text-sm">HR Remarks</p>
+                  <p className="text-sm whitespace-pre-wrap break-all rounded-md bg-muted p-3 italic">
+                    {viewingRequest.hr_remarks}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+>>>>>>> master
     </div>
   );
 }
