@@ -15,16 +15,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  PENDING: "secondary",
-  REVIEWED: "default",
-  RESOLVED: "default",
-  DISMISSED: "destructive",
-  CANCELLED: "secondary",
-};
+function statusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status.toUpperCase()) {
+    case "PENDING": return "secondary";
+    case "IN_REVIEW": return "default";
+    case "DISMISSED": return "destructive";
+    default: return "outline";
+  }
+}
+
+function statusBadgeClass(status: string): string {
+  switch (status.toUpperCase()) {
+    case "RESOLVED": return "bg-green-600 text-white dark:bg-green-500 dark:text-white";
+    default: return "";
+  }
+}
 
 function formatStatus(status: string): string {
-  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 function formatDate(val: string | null | undefined, formatStr: string): string {
@@ -45,13 +57,25 @@ interface ConcernTableProps {
 export function ConcernTable({ data, onView }: ConcernTableProps) {
   const columns: ColumnDef<Concern>[] = [
     {
+      accessorKey: "concern",
+      header: "Concern",
+      cell: ({ row }) => {
+        const concern = row.getValue("concern") as string;
+        return (
+          <span className="text-sm truncate max-w-[400px] block">
+            {concern || "———"}
+          </span>
+        );
+      },
+    },
+    {
       accessorKey: "subject_of_concern",
-      header: "Subject",
+      header: "Subject of Concern",
       cell: ({ row }) => {
         const subject = row.getValue("subject_of_concern") as string;
         return (
-          <span className="font-medium truncate max-w-[280px] block">
-            {row.original.is_anonymous ? "——— (Anonymous)" : subject}
+          <span className="text-sm truncate max-w-[200px] block">
+            {subject || "———"}
           </span>
         );
       },
@@ -66,8 +90,11 @@ export function ConcernTable({ data, onView }: ConcernTableProps) {
       header: "Status",
       cell: ({ row }) => {
         const status = (row.getValue("status") as string) || "PENDING";
-        const variant = statusVariantMap[status.toUpperCase()] ?? "outline";
-        return <Badge variant={variant}>{formatStatus(status)}</Badge>;
+        return (
+          <Badge variant={statusBadgeVariant(status)} className={statusBadgeClass(status)}>
+            {formatStatus(status)}
+          </Badge>
+        );
       },
     },
     {
@@ -96,11 +123,14 @@ export function ConcernTable({ data, onView }: ConcernTableProps) {
 
   const rowClass = (row: { original: Concern }): string => {
     const s = status(row);
-    if (s === "DISMISSED" || s === "CANCELLED") {
+    if (s === "DISMISSED") {
       return "bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/40";
     }
-    if (s === "RESOLVED" || s === "REVIEWED") {
+    if (s === "RESOLVED") {
       return "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30";
+    }
+    if (s === "IN_REVIEW") {
+      return "bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30";
     }
     return "hover:bg-slate-50/50 dark:hover:bg-slate-800/30";
   };

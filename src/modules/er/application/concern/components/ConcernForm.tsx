@@ -24,7 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { Paperclip, Upload, X, FileText } from "lucide-react";
 
 const SUBJECT_OPTIONS = [
   "Harassment or Discrimination",
@@ -50,16 +51,19 @@ type FormValues = z.infer<typeof FormSchema>;
 
 interface ConcernFormProps {
   initialData?: Concern;
-  onSubmit: (data: { subject_of_concern: string; concern: string; is_anonymous: boolean }) => void;
+  onSubmit: (data: { subject_of_concern: string; concern: string; is_anonymous: boolean }, files: File[]) => void;
   isLoading?: boolean;
+  uploadProgress?: { uploading: boolean; uploadCount: number; totalCount: number } | null;
 }
 
-export function ConcernForm({ initialData, onSubmit, isLoading }: ConcernFormProps) {
+export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }: ConcernFormProps) {
   const initialSubject = initialData?.subject_of_concern ?? "";
   const isInitialOther =
     initialSubject !== "" && !SUBJECT_OPTIONS.includes(initialSubject);
 
   const [isOther, setIsOther] = useState(isInitialOther);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -80,9 +84,35 @@ export function ConcernForm({ initialData, onSubmit, isLoading }: ConcernFormPro
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleSubmit = (values: FormValues) => {
+    onSubmit(values, selectedFiles);
+  };
+
+  const isUploading = uploadProgress?.uploading ?? false;
+  const uploadCount = uploadProgress?.uploadCount ?? 0;
+  const totalCount = uploadProgress?.totalCount ?? 0;
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((values) => onSubmit(values))} className="space-y-5">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
         <FormField
           control={form.control}
           name="subject_of_concern"
@@ -161,8 +191,58 @@ export function ConcernForm({ initialData, onSubmit, isLoading }: ConcernFormPro
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Submitting..." : "Submit Concern"}
+        <div className="space-y-2">
+          <Label className="text-xs font-medium flex items-center gap-1.5">
+            <Paperclip className="h-3 w-3" />
+            Attachments <span className="text-muted-foreground font-normal">(optional)</span>
+          </Label>
+          <div
+            className="flex items-center gap-3 p-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground">
+              Click to attach files (PDF, images, documents)
+            </span>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          {selectedFiles.length > 0 && (
+            <div className="max-h-[200px] overflow-y-auto space-y-1.5 mt-2 pr-1">
+              {selectedFiles.map((file, index) => (
+                <div
+                  key={`${file.name}-${index}`}
+                  className="flex items-center gap-2 p-2 rounded-lg bg-muted/20 border min-w-0 w-full"
+                >
+                  <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-xs font-medium truncate flex-1">{file.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{formatFileSize(file.size)}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="p-0.5 rounded-full hover:bg-muted transition-colors shrink-0"
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <Button type="submit" className="w-full" disabled={isLoading || isUploading}>
+          {isUploading
+            ? `Uploading files (${uploadCount}/${totalCount})...`
+            : isLoading
+            ? "Submitting..."
+            : selectedFiles.length > 0
+            ? `Submit Concern (${selectedFiles.length} file${selectedFiles.length > 1 ? "s" : ""})`
+            : "Submit Concern"}
         </Button>
       </form>
     </Form>

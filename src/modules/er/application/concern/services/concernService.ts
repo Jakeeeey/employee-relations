@@ -1,4 +1,4 @@
-import { CreateConcernInput, Concern, UpdateConcernInput } from "../type";
+import { CreateConcernInput, Concern, UpdateConcernInput, ConcernAttachment } from "../type";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -80,5 +80,28 @@ export class ConcernService {
 
     const { data: updatedData } = await res.json();
     return updatedData as Concern;
+  }
+
+  static async fetchAttachments(concernId: number): Promise<ConcernAttachment[]> {
+    const params = new URLSearchParams();
+    params.set("filter[concern_id][_eq]", String(concernId));
+    params.set("sort", "created_at");
+
+    const res = await fetch(
+      `${API_BASE_URL}/items/employee_concern_attachments?${params.toString()}`,
+      {
+        method: "GET",
+        headers: this.getHeaders(),
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch attachments: ${res.statusText} (${res.status})`);
+    }
+
+    const payload = await res.json();
+    const data = payload.data || payload || [];
+    return (Array.isArray(data) ? data : []) as ConcernAttachment[];
   }
 }

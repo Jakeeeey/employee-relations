@@ -2,10 +2,9 @@ import { z } from "zod";
 
 export const CONCERN_STATUS_VALUES = [
   "PENDING",
-  "REVIEWED",
+  "IN_REVIEW",
   "RESOLVED",
   "DISMISSED",
-  "CANCELLED",
 ] as const;
 
 export const ConcernStatusEnum = z.enum(CONCERN_STATUS_VALUES);
@@ -39,3 +38,23 @@ export const UpdateConcernSchema = ConcernSchema.omit({
 }).partial();
 
 export type UpdateConcernInput = z.infer<typeof UpdateConcernSchema>;
+
+export const ConcernAttachmentSchema = z.object({
+  id: z.number().optional(),
+  concern_id: z.number(),
+  file_path: z.string(),
+  file_name: z.string(),
+  file_type: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  created_by: z.number().nullable().optional(),
+});
+
+export type ConcernAttachment = z.infer<typeof ConcernAttachmentSchema>;
+
+export interface UploadedFileResult {
+  file_id: string;
+  file_url: string;
+  filename_download: string;
+  filesize?: number;
+  type?: string;
+}

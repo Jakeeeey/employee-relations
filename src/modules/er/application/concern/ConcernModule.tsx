@@ -4,9 +4,13 @@ import { useState } from "react";
 import { ConcernTable } from "./components/ConcernTable";
 import { ConcernForm } from "./components/ConcernForm";
 import { useConcern } from "./hooks/useConcern";
-import { Concern } from "./type";
+import { Concern, ConcernAttachment } from "./type";
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCcw, AlertCircle, FileText, Loader2, X, ArrowRight, Calendar, AlertTriangle } from "lucide-react";
+import {
+  Plus, RotateCcw, AlertCircle, FileText, Loader2, X, ArrowRight, Calendar,
+  AlertTriangle, Paperclip, Eye, Download, Image as ImageIcon, FileVideo,
+  FileAudio, FileSpreadsheet, FileWarning,
+} from "lucide-react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -14,16 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -33,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -41,36 +37,98 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
-const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  PENDING: "secondary",
-  REVIEWED: "default",
-  RESOLVED: "default",
-  DISMISSED: "destructive",
-  CANCELLED: "secondary",
-};
+function statusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status.toUpperCase()) {
+    case "PENDING": return "secondary";
+    case "IN_REVIEW": return "default";
+    case "DISMISSED": return "destructive";
+    default: return "outline";
+  }
+}
+
+function statusBadgeClass(status: string): string {
+  switch (status.toUpperCase()) {
+    case "RESOLVED": return "bg-green-600 text-white dark:bg-green-500 dark:text-white";
+    default: return "";
+  }
+}
 
 function formatStatus(status: string): string {
-  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 interface ConcernModuleProps {
   userId: number;
 }
 
+function getAttachmentIcon(fileType: string | null | undefined, fileName: string) {
+  const type = (fileType ?? "").toLowerCase();
+  const ext = (fileName ?? "").split(".").pop()?.toLowerCase() ?? "";
+
+  if (type.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext)) {
+    return { Icon: ImageIcon, tint: "text-violet-600 bg-violet-500/10" };
+  }
+  if (type.startsWith("video/") || ["mp4", "webm", "mov", "avi", "mkv"].includes(ext)) {
+    return { Icon: FileVideo, tint: "text-pink-600 bg-pink-500/10" };
+  }
+  if (type.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "flac"].includes(ext)) {
+    return { Icon: FileAudio, tint: "text-amber-600 bg-amber-500/10" };
+  }
+  if (type.includes("spreadsheet") || type.includes("excel") ||
+    ["xlsx", "xls", "csv", "ods"].includes(ext)) {
+    return { Icon: FileSpreadsheet, tint: "text-emerald-600 bg-emerald-500/10" };
+  }
+  if (type === "application/pdf" || ext === "pdf") {
+    return { Icon: FileText, tint: "text-red-600 bg-red-500/10" };
+  }
+  return { Icon: Paperclip, tint: "text-sky-600 bg-sky-500/10" };
+}
+
+type PreviewKind = "image" | "video" | "pdf" | "text" | "none";
+
+function previewKind(fileType: string | null | undefined, fileName: string): PreviewKind {
+  const type = (fileType ?? "").toLowerCase();
+  const ext = (fileName ?? "").split(".").pop()?.toLowerCase() ?? "";
+
+  if (type.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "avif"].includes(ext)) {
+    return "image";
+  }
+  if (type.startsWith("video/") || ["mp4", "webm", "ogv", "mov", "mkv"].includes(ext)) {
+    if (type.startsWith("video/") || ["mp4", "webm", "ogv"].includes(ext)) return "video";
+  }
+  if (type === "application/pdf" || ext === "pdf") {
+    return "pdf";
+  }
+  if (type.startsWith("text/") || type === "application/json" || type === "application/javascript" ||
+    type === "application/xml" ||
+    ["txt", "md", "markdown", "json", "csv", "log", "html", "htm", "xml", "js", "ts", "tsx", "css", "yml", "yaml"].includes(ext)) {
+    return "text";
+  }
+  return "none";
+}
+
 const ITEMS_PER_PAGE = 10;
-type StatusFilter = "all" | "PENDING" | "REVIEWED" | "RESOLVED" | "DISMISSED" | "CANCELLED";
+type StatusFilter = "all" | "PENDING" | "IN_REVIEW" | "RESOLVED" | "DISMISSED";
 
 export default function ConcernModule({ userId }: ConcernModuleProps) {
-  const { concerns, isLoading, error, refresh, createConcern, updateConcern } = useConcern();
+  const { concerns, isLoading, error, refresh, uploadProgress, submitConcernWithAttachments, fetchAttachments } = useConcern();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [viewingConcern, setViewingConcern] = useState<Concern | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
+  const [attachments, setAttachments] = useState<ConcernAttachment[]>([]);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string>("");
+  const [previewFileType, setPreviewFileType] = useState<string | null>(null);
 
   const handleOpenCreate = () => {
     setIsDialogOpen(true);
@@ -79,30 +137,51 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
   const handleOpenView = (concern: Concern) => {
     setViewingConcern(concern);
     setIsViewDialogOpen(true);
+    setIsLoadingAttachments(true);
+    fetchAttachments(concern.id ?? 0)
+      .then((data) => setAttachments(data))
+      .catch(() => setAttachments([]))
+      .finally(() => setIsLoadingAttachments(false));
   };
 
-  const onSubmit = async (data: { subject_of_concern: string; concern: string; is_anonymous: boolean }) => {
-    await createConcern({
-      user_id: userId,
-      subject_of_concern: data.subject_of_concern,
-      concern: data.concern,
-      is_anonymous: data.is_anonymous,
-    });
-    setIsDialogOpen(false);
+  const handlePreview = (path: string, fileName: string, fileType?: string | null) => {
+    const encoded = encodeURIComponent(path);
+    setPreviewUrl(`/api/er/application/concern/file?path=${encoded}`);
+    setPreviewTitle(fileName || "Attachment");
+    setPreviewFileType(fileType ?? null);
   };
 
-  const handleCancel = async () => {
-    if (!viewingConcern?.id) return;
-    setIsCancelling(true);
+  const handleDownload = async (path: string, fileName: string) => {
+    const encoded = encodeURIComponent(path);
+    const url = `/api/er/application/concern/file?path=${encoded}&download=1`;
     try {
-      await updateConcern(viewingConcern.id, { status: "CANCELLED" });
-      setIsCancelDialogOpen(false);
-      setIsViewDialogOpen(false);
-    } catch {
-      // error toast handled by useConcern
-    } finally {
-      setIsCancelling(false);
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("[download] failed", err);
     }
+  };
+
+  const onSubmit = async (data: { subject_of_concern: string; concern: string; is_anonymous: boolean }, files: File[]) => {
+    await submitConcernWithAttachments(
+      {
+        user_id: userId,
+        subject_of_concern: data.subject_of_concern,
+        concern: data.concern,
+        is_anonymous: data.is_anonymous,
+      },
+      files,
+    );
+    setIsDialogOpen(false);
   };
 
   const handleRefresh = async () => {
@@ -193,10 +272,9 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="REVIEWED">Reviewed</SelectItem>
+                  <SelectItem value="IN_REVIEW">In Review</SelectItem>
                   <SelectItem value="RESOLVED">Resolved</SelectItem>
                   <SelectItem value="DISMISSED">Dismissed</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -248,19 +326,20 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-sm:max-h-[85vh] max-sm:overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Concern</DialogTitle>
           </DialogHeader>
           <ConcernForm
             onSubmit={onSubmit}
             isLoading={isLoading}
+            uploadProgress={uploadProgress}
           />
         </DialogContent>
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent showCloseButton={false} className="sm:max-w-lg overflow-hidden p-0 rounded-2xl">
+        <DialogContent showCloseButton={false} className="sm:max-w-lg p-0 rounded-2xl max-sm:max-h-[85vh] max-sm:overflow-y-auto">
           {viewingConcern && (
             <>
               <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-4 border-b">
@@ -276,7 +355,10 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                       Reference #{viewingConcern.id}
                     </p>
                   </div>
-                  <Badge variant={statusVariantMap[viewingConcern.status?.toUpperCase() ?? ""] ?? "outline"}>
+                  <Badge
+                    variant={statusBadgeVariant(viewingConcern.status ?? "PENDING")}
+                    className={statusBadgeClass(viewingConcern.status ?? "PENDING")}
+                  >
                     {formatStatus(viewingConcern.status ?? "PENDING")}
                   </Badge>
                 </div>
@@ -288,24 +370,26 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                     <div className="p-1.5 rounded-lg bg-primary/5">
                       <ArrowRight className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Subject</span>
+                    <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Subject of Concern</span>
                   </div>
                   <p className="text-sm font-medium pl-9">
                     {viewingConcern.is_anonymous ? "——— (Anonymous)" : viewingConcern.subject_of_concern}
                   </p>
                 </div>
 
-                <div className="rounded-xl border bg-card p-4 space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-primary/5">
-                      <FileText className="h-4 w-4 text-primary" />
+                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/5">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Concern</span>
                     </div>
-                    <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Concern</span>
+                    <div className="max-h-[200px] overflow-y-auto pl-9">
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {viewingConcern.concern}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap break-words pl-9">
-                    {viewingConcern.concern}
-                  </p>
-                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="rounded-xl border bg-card p-4 space-y-3">
@@ -334,20 +418,65 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                     </p>
                   </div>
                 </div>
+
+                <Separator className="my-2" />
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <Paperclip className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                      Attachments ({attachments.length})
+                    </span>
+                  </div>
+                  {isLoadingAttachments ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Loading attachments...
+                    </div>
+                  ) : attachments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">No attachments.</p>
+                  ) : (
+                    <div className="max-h-[250px] overflow-y-auto space-y-1.5 pr-1">
+                      {attachments.map((att) => {
+                        const { Icon, tint } = getAttachmentIcon(att.file_type, att.file_name);
+                        return (
+                          <div
+                            key={att.id}
+                            className="flex items-center gap-3 p-3 bg-muted/20 border rounded-lg min-w-0 w-full"
+                          >
+                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tint}`}>
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm font-medium truncate flex-1 max-w-[260px]">
+                              {att.file_name}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Preview"
+                              onClick={() => handlePreview(att.file_path, att.file_name, att.file_type)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Download"
+                              onClick={() => handleDownload(att.file_path, att.file_name)}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="px-5 pb-5 pt-0 flex flex-col sm:flex-row gap-3">
-                {viewingConcern.status?.toUpperCase() === "PENDING" && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1 h-10 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-medium"
-                    onClick={() => setIsCancelDialogOpen(true)}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel Request
-                  </Button>
-                )}
                 <Button
                   type="button"
                   variant="ghost"
@@ -362,38 +491,133 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <AlertDialogContent className="rounded-2xl">
-          <AlertDialogHeader>
-            <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-3">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
-            </div>
-            <AlertDialogTitle className="text-center">Cancel Concern</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              Are you sure you want to cancel this concern? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="sm:justify-center gap-2">
-            <AlertDialogCancel className="rounded-xl h-10 px-6" disabled={isCancelling}>
-              Keep Concern
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="rounded-xl h-10 px-6 bg-red-600 hover:bg-red-700"
-              onClick={handleCancel}
-              disabled={isCancelling}
-            >
-              {isCancelling ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cancelling...
-                </>
-              ) : (
-                "Yes, Cancel Concern"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) { setPreviewUrl(null); setPreviewFileType(null); } }}>
+        <DialogContent
+          showCloseButton={false}
+          className="sm:max-w-[900px] overflow-hidden p-0 rounded-2xl border-2 shadow-2xl max-sm:max-h-[85vh] max-sm:overflow-y-auto"
+        >
+          {previewUrl && (() => {
+            const kind = previewKind(previewFileType, previewTitle);
+            const { Icon, tint } = getAttachmentIcon(previewFileType, previewTitle);
+
+            return (
+              <>
+                <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-3">
+                  <DialogHeader>
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2.5 rounded-xl shrink-0 ${tint}`}>
+                        <Icon className="h-5 w-5 stroke-[2.5px]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <DialogTitle className="text-lg font-bold tracking-tight line-clamp-1">
+                          {previewTitle}
+                        </DialogTitle>
+                        <p className="text-xs font-medium opacity-70">
+                          {kind === "pdf" ? "PDF Document" :
+                           kind === "image" ? "Image" :
+                           kind === "video" ? "Video" :
+                           kind === "text" ? "Text File" : "File Preview"}
+                        </p>
+                      </div>
+                    </div>
+                  </DialogHeader>
+                </div>
+
+                <Separator className="bg-primary/10" />
+
+                <div className="p-5">
+                  <div className="rounded-xl border bg-muted/20 overflow-hidden">
+                    {kind === "pdf" && (
+                      <div className="h-[60vh] overflow-auto bg-zinc-100">
+                        <iframe src={previewUrl} title={previewTitle} className="w-full h-full border-0" />
+                      </div>
+                    )}
+                    {kind === "image" && (
+                      <div className="flex items-center justify-center bg-zinc-950/5 p-4 max-h-[60vh]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={previewUrl} alt={previewTitle} className="max-w-full max-h-[56vh] object-contain rounded-lg shadow-sm" />
+                      </div>
+                    )}
+                    {kind === "video" && (
+                      <div className="flex items-center justify-center bg-black p-4 max-h-[60vh]">
+                        <video src={previewUrl} controls className="max-w-full max-h-[56vh] rounded-lg">
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                    )}
+                    {kind === "text" && <TextPreview url={previewUrl} />}
+                    {kind === "none" && <PreviewUnavailable />}
+                  </div>
+                </div>
+
+                <div className="px-5 pb-5 pt-0 flex flex-col sm:flex-row gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => { setPreviewUrl(null); setPreviewFileType(null); }}
+                    className="flex-1 h-11 rounded-xl font-bold text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Close
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function TextPreview({ url }: { url: string }) {
+  const [textContent, setTextContent] = useState<string | null>(null);
+  const [textError, setTextError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(url)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load preview");
+        const text = await res.text();
+        if (!cancelled) { setTextContent(text); setTextError(null); }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) { setTextError(err.message); setTextContent(null); }
+      });
+    return () => { cancelled = true; };
+  }, [url]);
+
+  return (
+    <div className="h-[60vh] overflow-auto">
+      {textError ? (
+        <PreviewUnavailable message={textError} />
+      ) : textContent === null ? (
+        <div className="flex items-center justify-center h-full gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading preview...
+        </div>
+      ) : (
+        <pre className="text-xs font-mono whitespace-pre-wrap break-words p-4 text-foreground/90 select-none pointer-events-none">
+          {textContent}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+function PreviewUnavailable({ message }: { message?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-16 text-center px-6">
+      <div className="p-3 rounded-full bg-amber-500/10">
+        <FileWarning className="h-6 w-6 text-amber-600" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-foreground">No preview available</p>
+        <p className="text-xs text-muted-foreground/70 max-w-sm">
+          {message || "This file type cannot be previewed in the browser."}
+        </p>
+      </div>
     </div>
   );
 }
