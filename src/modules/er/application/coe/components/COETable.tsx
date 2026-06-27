@@ -4,7 +4,7 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import { COERequest } from "../type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, FileText } from "lucide-react";
+import { Eye } from "lucide-react";
 import { format, isValid } from "date-fns";
 import {
   Table,
@@ -20,7 +20,7 @@ const statusVariantMap: Record<string, "default" | "secondary" | "destructive" |
   APPROVED: "default",
   RELEASED: "default",
   REJECTED: "destructive",
-  CANCELLED: "destructive",
+  CANCELLED: "secondary",
 };
 
 function formatStatus(status: string): string {
@@ -37,18 +37,12 @@ function formatDate(val: string | null | undefined, formatStr: string): string {
   }
 }
 
-function isPreviewable(status: string | null | undefined): boolean {
-  const s = (status || "").toUpperCase();
-  return s === "APPROVED" || s === "RELEASED";
-}
-
 interface COETableProps {
   data: COERequest[];
   onView: (request: COERequest) => void;
-  onPreview: (url: string, title?: string | null) => void;
 }
 
-export function COETable({ data, onView, onPreview }: COETableProps) {
+export function COETable({ data, onView }: COETableProps) {
   const columns: ColumnDef<COERequest>[] = [
     {
       accessorKey: "purpose",
@@ -71,29 +65,8 @@ export function COETable({ data, onView, onPreview }: COETableProps) {
       cell: ({ row }) => {
         const status = (row.getValue("status") as string) || "PENDING";
         const variant = statusVariantMap[status.toUpperCase()] ?? "outline";
-        return <Badge variant={variant}>{formatStatus(status)}</Badge>;
-      },
-    },
-    {
-      id: "ecopy",
-      header: "E-Copy",
-      cell: ({ row }) => {
-        const request = row.original;
-        const url = request.ecopy_file_url;
-        if (!isPreviewable(request.status) || !url) return <span className="text-muted-foreground">-</span>;
-
-        const title = request.doc_title;
-        return (
-          <button
-            type="button"
-            onClick={() => onPreview(url, request.doc_title)}
-            className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline truncate max-w-[180px]"
-            title={title ?? ""}
-          >
-            <FileText className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{title}</span>
-          </button>
-        );
+        return <Badge variant={variant}
+          className={status.toUpperCase() === "RELEASED" ? "bg-green-600 text-white dark:bg-green-500 dark:text-white" : ""}>{formatStatus(status)}</Badge>;
       },
     },
     {
@@ -122,7 +95,7 @@ export function COETable({ data, onView, onPreview }: COETableProps) {
 
   const rowClass = (row: { original: COERequest }): string => {
     const s = status(row);
-    if (s === "REJECTED" || s === "CANCELLED") {
+    if (s === "REJECTED") {
       return "bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/40";
     }
     if (s === "APPROVED" || s === "RELEASED") {
