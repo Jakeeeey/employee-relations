@@ -143,26 +143,26 @@ export default function COEModule({ userId }: COEModuleProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Certificate of Employment</h2>
           <p className="text-muted-foreground">
             Request and manage your Certificate of Employment.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="h-9 text-sm w-36 justify-start pl-3 text-left font-normal border border-slate-200 dark:border-slate-700"
+            className="flex-1 sm:flex-none h-9 text-sm w-auto justify-center px-3 font-normal border border-slate-200 dark:border-slate-700"
           >
             <RotateCcw
               className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
             />
             {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
-          <Button onClick={handleOpenCreate}>
+          <Button onClick={handleOpenCreate} className="flex-1 sm:flex-none">
             <Plus className="mr-2 h-4 w-4" />
             New COE Request
           </Button>
@@ -171,32 +171,32 @@ export default function COEModule({ userId }: COEModuleProps) {
 
       <Card className="border border-slate-200 dark:border-slate-700">
         <CardHeader>
-          <div className="flex flex-row items-end justify-between gap-4">
-            <div>
-              <CardTitle>COE Requests</CardTitle>
-              <CardDescription>
-                Showing {filteredRequests.length} record(s)
-              </CardDescription>
+          <div className="flex items-center gap-3 w-full">
+            <CardTitle className="shrink-0">COE Requests</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              Showing {filteredRequests.length} record(s)
+            </CardDescription>
+            <div className="ml-auto">
+              <Select
+                value={statusFilter}
+                onValueChange={(val) => {
+                  setStatusFilter(val as StatusFilter);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-7 text-xs w-auto min-w-[110px] justify-start pl-2.5 text-left font-normal border border-slate-200 dark:border-slate-700">
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="APPROVED">Approved</SelectItem>
+                  <SelectItem value="REJECTED">Rejected</SelectItem>
+                  <SelectItem value="RELEASED">Released</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(val) => {
-                setStatusFilter(val as StatusFilter);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 text-sm w-36 justify-start pl-3 text-left font-normal border border-slate-200 dark:border-slate-700">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="APPROVED">Approved</SelectItem>
-                <SelectItem value="REJECTED">Rejected</SelectItem>
-                <SelectItem value="RELEASED">Released</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardHeader>
         <CardContent>
@@ -206,7 +206,7 @@ export default function COEModule({ userId }: COEModuleProps) {
             </div>
           ) : (
             <>
-              <div className="rounded-md border border-slate-200 dark:border-slate-700 h-96">
+              <div className="rounded-md border border-slate-200 dark:border-slate-700 overflow-x-auto">
                 <COETable
                   data={paginatedRequests}
                   onView={handleOpenView}
@@ -214,16 +214,16 @@ export default function COEModule({ userId }: COEModuleProps) {
                 />
               </div>
 
-              <div className="flex items-center justify-between mt-6">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6">
+                <div className="text-sm text-muted-foreground order-2 sm:order-1">
                   Page {currentPage} of {totalPages} &bull; Showing {endIndex} of{" "}
                   {filteredRequests.length} records
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border border-slate-200 dark:border-slate-700"
+                    className="flex-1 sm:flex-none border border-slate-200 dark:border-slate-700"
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
                   >
@@ -232,7 +232,7 @@ export default function COEModule({ userId }: COEModuleProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border border-slate-200 dark:border-slate-700"
+                    className="flex-1 sm:flex-none border border-slate-200 dark:border-slate-700"
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
                   >
@@ -328,7 +328,7 @@ export default function COEModule({ userId }: COEModuleProps) {
           </DialogHeader>
           {viewingRequest && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="font-semibold text-muted-foreground">Purpose</p>
                   <p>{viewingRequest.purpose}</p>
