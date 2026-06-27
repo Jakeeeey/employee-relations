@@ -5,8 +5,9 @@ import { COETable } from "./components/COETable";
 import { COEForm } from "./components/COEForm";
 import { useCOE } from "./hooks/useCOE";
 import { COERequest } from "./type";
+import { getFileProxyUrl } from "./fileProxy";
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCcw, AlertCircle } from "lucide-react";
+import { Plus, RotateCcw, AlertCircle, Download, FileText, Loader2, X } from "lucide-react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -44,6 +45,18 @@ function formatStatus(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 }
 
+function getDocTitle(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const filename = url.split("/").pop()?.split("?")[0]?.split("#")[0] ?? "";
+  const name = filename.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
+  return name || null;
+}
+
+function isPreviewable(status: string | null | undefined): boolean {
+  const s = (status || "").toUpperCase();
+  return s === "APPROVED" || s === "RELEASED";
+}
+
 interface COEModuleProps {
   userId: number;
 }
@@ -55,6 +68,9 @@ export default function COEModule({ userId }: COEModuleProps) {
   const { requests, isLoading, error, refresh, createRequest, updateRequest } = useCOE();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string>("Document");
   const [editingRequest, setEditingRequest] = useState<COERequest | null>(null);
   const [viewingRequest, setViewingRequest] = useState<COERequest | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -74,6 +90,15 @@ export default function COEModule({ userId }: COEModuleProps) {
   const handleOpenView = (request: COERequest) => {
     setViewingRequest(request);
     setIsViewDialogOpen(true);
+  };
+
+  const handlePreview = (url: string) => {
+    const proxied = getFileProxyUrl(url);
+    if (!proxied) return;
+    const title = getDocTitle(url) ?? "Document";
+    setPreviewUrl(proxied);
+    setPreviewTitle(title);
+    setIsPreviewOpen(true);
   };
 
   const onSubmit = async (data: { purpose: string }) => {
@@ -190,7 +215,12 @@ export default function COEModule({ userId }: COEModuleProps) {
           ) : (
             <>
               <div className="rounded-md border border-slate-200 dark:border-slate-700 h-96">
-                <COETable data={paginatedRequests} onEdit={handleOpenEdit} onView={handleOpenView} />
+                <COETable
+                  data={paginatedRequests}
+                  onEdit={handleOpenEdit}
+                  onView={handleOpenView}
+                  onPreview={handlePreview}
+                />
               </div>
 
               <div className="flex items-center justify-between mt-6">
@@ -239,6 +269,75 @@ export default function COEModule({ userId }: COEModuleProps) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isPreviewOpen} onOpenChange={(open) => { if (!open) { setIsPreviewOpen(false); setPreviewUrl(null); } }}>
+        <DialogContent showCloseButton={false} className="sm:max-w-[900px] overflow-hidden p-0 rounded-2xl border-2 shadow-2xl">
+          <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-primary/10 rounded-xl shrink-0">
+                <FileText className="h-5 w-5 text-primary stroke-[2.5px]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-lg font-bold tracking-tight line-clamp-1">
+                  {previewTitle}
+                </DialogTitle>
+                <p className="text-xs font-medium opacity-70">PDF Document</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => { setIsPreviewOpen(false); setPreviewUrl(null); }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-5">
+            <div className="rounded-xl border bg-muted/20 overflow-hidden">
+              {previewUrl ? (
+                <div className="h-[60vh] overflow-auto bg-zinc-100">
+                  <iframe
+                    src={previewUrl}
+                    title={previewTitle}
+                    className="w-full h-full border-0"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-[60vh] gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading preview...
+                </div>
+              )}
+            </div>
+          </div>
+
+          {previewUrl && (
+            <div className="px-5 pb-5 pt-0 flex flex-col sm:flex-row gap-3">
+              <Button
+                type="button"
+                asChild
+                className="flex-1 h-11 rounded-xl font-bold shadow-lg shadow-primary/20"
+              >
+                <a href={previewUrl} download>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </a>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => { setIsPreviewOpen(false); setPreviewUrl(null); }}
+                className="sm:flex-1 h-11 rounded-xl font-bold text-muted-foreground hover:bg-muted"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -279,14 +378,22 @@ export default function COEModule({ userId }: COEModuleProps) {
               {viewingRequest.ecopy_file_url && (
                 <div className="space-y-1">
                   <p className="font-semibold text-muted-foreground text-sm">E-Copy</p>
-                  <a
-                    href={viewingRequest.ecopy_file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary underline break-all"
-                  >
-                    {viewingRequest.ecopy_file_url}
-                  </a>
+                  {isPreviewable(viewingRequest.status) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handlePreview(viewingRequest.ecopy_file_url!);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      {getDocTitle(viewingRequest.ecopy_file_url)}
+                    </button>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      {getDocTitle(viewingRequest.ecopy_file_url)}
+                    </span>
+                  )}
                 </div>
               )}
               {viewingRequest.hr_remarks && (

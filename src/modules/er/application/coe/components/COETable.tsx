@@ -4,7 +4,7 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import { COERequest } from "../type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2, Eye, MoreHorizontal } from "lucide-react";
+import { Edit2, Eye, FileText, MoreHorizontal } from "lucide-react";
 import { format, isValid } from "date-fns";
 import {
   DropdownMenu,
@@ -43,13 +43,26 @@ function formatDate(val: string | null | undefined, formatStr: string): string {
   }
 }
 
+function getDocTitle(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const filename = url.split("/").pop()?.split("?")[0]?.split("#")[0] ?? "";
+  const name = filename.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
+  return name || null;
+}
+
+function isPreviewable(status: string | null | undefined): boolean {
+  const s = (status || "").toUpperCase();
+  return s === "APPROVED" || s === "RELEASED";
+}
+
 interface COETableProps {
   data: COERequest[];
   onEdit: (request: COERequest) => void;
   onView: (request: COERequest) => void;
+  onPreview: (url: string) => void;
 }
 
-export function COETable({ data, onEdit, onView }: COETableProps) {
+export function COETable({ data, onEdit, onView, onPreview }: COETableProps) {
   const columns: ColumnDef<COERequest>[] = [
     {
       accessorKey: "purpose",
@@ -73,6 +86,28 @@ export function COETable({ data, onEdit, onView }: COETableProps) {
         const status = (row.getValue("status") as string) || "PENDING";
         const variant = statusVariantMap[status.toUpperCase()] ?? "outline";
         return <Badge variant={variant}>{formatStatus(status)}</Badge>;
+      },
+    },
+    {
+      id: "ecopy",
+      header: "E-Copy",
+      cell: ({ row }) => {
+        const request = row.original;
+        const url = request.ecopy_file_url;
+        if (!isPreviewable(request.status) || !url) return <span className="text-muted-foreground">-</span>;
+
+        const title = getDocTitle(url);
+        return (
+          <button
+            type="button"
+            onClick={() => onPreview(url)}
+            className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline truncate max-w-[180px]"
+            title={title ?? ""}
+          >
+            <FileText className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{title}</span>
+          </button>
+        );
       },
     },
     {
