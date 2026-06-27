@@ -15,10 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline" | "success"> = {
+const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   PENDING: "secondary",
   APPROVED: "default",
-  RELEASED: "success",
+  RELEASED: "default",
   REJECTED: "destructive",
   CANCELLED: "secondary",
 };
@@ -65,7 +65,8 @@ export function COETable({ data, onView }: COETableProps) {
       cell: ({ row }) => {
         const status = (row.getValue("status") as string) || "PENDING";
         const variant = statusVariantMap[status.toUpperCase()] ?? "outline";
-        return <Badge variant={variant}>{formatStatus(status)}</Badge>;
+        return <Badge variant={variant}
+          className={status.toUpperCase() === "RELEASED" ? "bg-green-600 text-white dark:bg-green-500 dark:text-white" : ""}>{formatStatus(status)}</Badge>;
       },
     },
     {

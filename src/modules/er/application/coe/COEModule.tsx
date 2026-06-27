@@ -43,10 +43,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline" | "success"> = {
+const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   PENDING: "secondary",
   APPROVED: "default",
-  RELEASED: "success",
+  RELEASED: "default",
   REJECTED: "destructive",
   CANCELLED: "secondary",
 };
@@ -357,7 +357,8 @@ export default function COEModule({ userId }: COEModuleProps) {
                       Reference #{viewingRequest.id}
                     </p>
                   </div>
-                  <Badge variant={statusVariantMap[viewingRequest.status?.toUpperCase() ?? ""] ?? "outline"}>
+                  <Badge variant={statusVariantMap[viewingRequest.status?.toUpperCase() ?? ""] ?? "outline"}
+                    className={viewingRequest.status?.toUpperCase() === "RELEASED" ? "bg-green-600 text-white dark:bg-green-500 dark:text-white" : ""}>
                     {formatStatus(viewingRequest.status ?? "PENDING")}
                   </Badge>
                 </div>
