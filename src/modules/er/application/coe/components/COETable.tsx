@@ -4,11 +4,7 @@ import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack
 import { COERequest } from "../type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-<<<<<<< HEAD
 import { Eye } from "lucide-react";
-=======
-import { Eye, FileText } from "lucide-react";
->>>>>>> master
 import { format, isValid } from "date-fns";
 import {
   Table,
@@ -19,21 +15,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-<<<<<<< HEAD
 const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline" | "success"> = {
   PENDING: "secondary",
   APPROVED: "default",
   RELEASED: "success",
   REJECTED: "destructive",
   CANCELLED: "secondary",
-=======
-const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  PENDING: "secondary",
-  APPROVED: "default",
-  RELEASED: "default",
-  REJECTED: "destructive",
-  CANCELLED: "destructive",
->>>>>>> master
 };
 
 function formatStatus(status: string): string {
@@ -50,27 +37,12 @@ function formatDate(val: string | null | undefined, formatStr: string): string {
   }
 }
 
-<<<<<<< HEAD
 interface COETableProps {
   data: COERequest[];
   onView: (request: COERequest) => void;
 }
 
 export function COETable({ data, onView }: COETableProps) {
-=======
-function isPreviewable(status: string | null | undefined): boolean {
-  const s = (status || "").toUpperCase();
-  return s === "APPROVED" || s === "RELEASED";
-}
-
-interface COETableProps {
-  data: COERequest[];
-  onView: (request: COERequest) => void;
-  onPreview: (url: string, title?: string | null) => void;
-}
-
-export function COETable({ data, onView, onPreview }: COETableProps) {
->>>>>>> master
   const columns: ColumnDef<COERequest>[] = [
     {
       accessorKey: "purpose",
@@ -97,31 +69,6 @@ export function COETable({ data, onView, onPreview }: COETableProps) {
       },
     },
     {
-<<<<<<< HEAD
-=======
-      id: "ecopy",
-      header: "E-Copy",
-      cell: ({ row }) => {
-        const request = row.original;
-        const url = request.ecopy_file_url;
-        if (!isPreviewable(request.status) || !url) return <span className="text-muted-foreground">-</span>;
-
-        const title = request.doc_title;
-        return (
-          <button
-            type="button"
-            onClick={() => onPreview(url, request.doc_title)}
-            className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline truncate max-w-[180px]"
-            title={title ?? ""}
-          >
-            <FileText className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{title}</span>
-          </button>
-        );
-      },
-    },
-    {
->>>>>>> master
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
@@ -147,11 +94,7 @@ export function COETable({ data, onView, onPreview }: COETableProps) {
 
   const rowClass = (row: { original: COERequest }): string => {
     const s = status(row);
-<<<<<<< HEAD
     if (s === "REJECTED") {
-=======
-    if (s === "REJECTED" || s === "CANCELLED") {
->>>>>>> master
       return "bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/40";
     }
     if (s === "APPROVED" || s === "RELEASED") {
