@@ -75,11 +75,6 @@ export default function COEModule({ userId }: COEModuleProps) {
     setIsDialogOpen(true);
   };
 
-  const handleOpenEdit = (request: COERequest) => {
-    setEditingRequest(request);
-    setIsDialogOpen(true);
-  };
-
   const handleOpenView = (request: COERequest) => {
     setViewingRequest(request);
     setIsViewDialogOpen(true);
