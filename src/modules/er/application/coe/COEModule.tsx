@@ -36,7 +36,7 @@ import {
 const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   PENDING: "secondary",
   APPROVED: "default",
-  RELEASED: "default",
+  RELEASED: "success",
   REJECTED: "destructive",
   CANCELLED: "destructive",
 };
