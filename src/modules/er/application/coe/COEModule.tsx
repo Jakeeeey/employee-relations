@@ -7,7 +7,7 @@ import { useCOE } from "./hooks/useCOE";
 import { COERequest } from "./type";
 import { getFileProxyUrl } from "./fileProxy";
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCcw, AlertCircle, Download, FileText, Loader2, X } from "lucide-react";
+import { Plus, RotateCcw, AlertCircle, Download, FileText, Loader2, X, ArrowRight, Calendar, Clock, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -15,6 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -33,12 +43,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline" | "success"> = {
   PENDING: "secondary",
   APPROVED: "default",
   RELEASED: "success",
   REJECTED: "destructive",
-  CANCELLED: "destructive",
+  CANCELLED: "secondary",
 };
 
 function formatStatus(status: string): string {
@@ -69,6 +79,8 @@ export default function COEModule({ userId }: COEModuleProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const handleOpenCreate = () => {
     setEditingRequest(null);
@@ -95,6 +107,20 @@ export default function COEModule({ userId }: COEModuleProps) {
       await createRequest({ employee_id: userId, purpose: data.purpose });
     }
     setIsDialogOpen(false);
+  };
+
+  const handleCancel = async () => {
+    if (!viewingRequest?.id) return;
+    setIsCancelling(true);
+    try {
+      await updateRequest(viewingRequest.id, { status: "CANCELLED" });
+      setIsCancelDialogOpen(false);
+      setIsViewDialogOpen(false);
+    } catch {
+      // error toast is handled by useCOE
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const handleRefresh = async () => {
@@ -205,7 +231,6 @@ export default function COEModule({ userId }: COEModuleProps) {
                 <COETable
                   data={paginatedRequests}
                   onView={handleOpenView}
-                  onPreview={handlePreview}
                 />
               </div>
 
@@ -317,75 +342,179 @@ export default function COEModule({ userId }: COEModuleProps) {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>COE Request Details</DialogTitle>
-          </DialogHeader>
+        <DialogContent showCloseButton={false} className="sm:max-w-lg overflow-hidden p-0 rounded-2xl">
           {viewingRequest && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="font-semibold text-muted-foreground">Purpose</p>
-                  <p>{viewingRequest.purpose}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-muted-foreground">Status</p>
-                  <p>
-                    <Badge variant={statusVariantMap[viewingRequest.status?.toUpperCase() ?? ""] ?? "outline"}>
-                      {formatStatus(viewingRequest.status ?? "PENDING")}
-                    </Badge>
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-muted-foreground">Request Date</p>
-                  <p>
-                    {viewingRequest.request_date
-                      ? format(new Date(viewingRequest.request_date), "PPP")
-                      : "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-muted-foreground">Approval Date</p>
-                  <p>
-                    {viewingRequest.approval_date
-                      ? format(new Date(viewingRequest.approval_date), "PPP")
-                      : "-"}
-                  </p>
+            <>
+              <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-4 border-b">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-primary/10 rounded-xl shrink-0">
+                    <FileText className="h-5 w-5 text-primary stroke-[2.5px]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <DialogTitle className="text-lg font-bold tracking-tight">
+                      COE Request Details
+                    </DialogTitle>
+                    <p className="text-xs font-medium opacity-70 mt-0.5">
+                      Reference #{viewingRequest.id}
+                    </p>
+                  </div>
+                  <Badge variant={statusVariantMap[viewingRequest.status?.toUpperCase() ?? ""] ?? "outline"}>
+                    {formatStatus(viewingRequest.status ?? "PENDING")}
+                  </Badge>
                 </div>
               </div>
-              {viewingRequest.ecopy_file_url && (
-                <div className="space-y-1">
-                  <p className="font-semibold text-muted-foreground text-sm">E-Copy</p>
-                  {isPreviewable(viewingRequest.status) ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handlePreview(viewingRequest.ecopy_file_url!, viewingRequest.doc_title);
-                      }}
-                      className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      {viewingRequest.doc_title}
-                    </button>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">
-                      {viewingRequest.doc_title}
-                    </span>
-                  )}
+
+              <div className="p-5 space-y-4">
+                <div className="rounded-xl border bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/5">
+                        <ArrowRight className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Purpose</span>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium pl-9">{viewingRequest.purpose}</p>
                 </div>
-              )}
-              {viewingRequest.hr_remarks && (
-                <div className="space-y-1">
-                  <p className="font-semibold text-muted-foreground text-sm">HR Remarks</p>
-                  <p className="text-sm whitespace-pre-wrap break-all rounded-md bg-muted p-3 italic">
-                    {viewingRequest.hr_remarks}
-                  </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/5">
+                        <Calendar className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Request Date</span>
+                    </div>
+                    <p className="text-sm font-medium pl-9">
+                      {viewingRequest.request_date
+                        ? format(new Date(viewingRequest.request_date), "PPP")
+                        : "-"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/5">
+                        <Clock className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Approval Date</span>
+                    </div>
+                    <p className="text-sm font-medium pl-9">
+                      {viewingRequest.approval_date
+                        ? format(new Date(viewingRequest.approval_date), "PPP")
+                        : "-"}
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {viewingRequest.status?.toUpperCase() !== "PENDING" && (
+                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-lg bg-primary/5">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">E-Copy</span>
+                      </div>
+                    </div>
+                    <div className="pl-9">
+                      {viewingRequest.ecopy_file_url ? (
+                        isPreviewable(viewingRequest.status) ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handlePreview(viewingRequest.ecopy_file_url!, viewingRequest.doc_title);
+                            }}
+                            className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline font-medium"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            {viewingRequest.doc_title || "View Document"}
+                          </button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            {viewingRequest.doc_title || "Uploaded"}
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Not yet uploaded</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {viewingRequest.hr_remarks && (
+                  <div className="rounded-xl border border-amber-200/50 bg-amber-50/50 p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-amber-100">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-amber-700 uppercase">HR Remarks</span>
+                    </div>
+                    <p className="text-sm pl-9 whitespace-pre-wrap break-all italic text-amber-900">
+                      {viewingRequest.hr_remarks}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-5 pb-5 pt-0 flex flex-col sm:flex-row gap-3">
+                {viewingRequest.status?.toUpperCase() === "PENDING" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 h-10 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-medium"
+                    onClick={() => setIsCancelDialogOpen(true)}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel Request
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsViewDialogOpen(false)}
+                  className="flex-1 h-10 rounded-xl font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Close
+                </Button>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-3">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+            <AlertDialogTitle className="text-center">Cancel COE Request</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Are you sure you want to cancel this Certificate of Employment request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-2">
+            <AlertDialogCancel className="rounded-xl h-10 px-6" disabled={isCancelling}>
+              Keep Request
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl h-10 px-6 bg-red-600 hover:bg-red-700"
+              onClick={handleCancel}
+              disabled={isCancelling}
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Yes, Cancel Request"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
