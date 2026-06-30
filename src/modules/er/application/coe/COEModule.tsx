@@ -366,9 +366,6 @@ export default function COEModule({ userId }: COEModuleProps) {
                     <DialogTitle className="text-lg font-bold tracking-tight">
                       COE Request Details
                     </DialogTitle>
-                    <p className="text-xs font-medium opacity-70 mt-0.5">
-                      Reference #{viewingRequest.id}
-                    </p>
                   </div>
                   <Badge variant={statusVariantMap[viewingRequest.status?.toUpperCase() ?? ""] ?? "outline"}
                     className={viewingRequest.status?.toUpperCase() === "RELEASED" ? "bg-green-600 text-white dark:bg-green-500 dark:text-white" : ""}>

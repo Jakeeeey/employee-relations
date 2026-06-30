@@ -2,19 +2,14 @@ import { z } from "zod";
 
 export function getGMT8Timestamp(): string {
   const now = new Date();
-  return (
-    now.getUTCFullYear() +
-    "-" +
-    String(now.getUTCMonth() + 1).padStart(2, "0") +
-    "-" +
-    String(now.getUTCDate()).padStart(2, "0") +
-    " " +
-    String(now.getUTCHours()).padStart(2, "0") +
-    ":" +
-    String(now.getUTCMinutes()).padStart(2, "0") +
-    ":" +
-    String(now.getUTCSeconds()).padStart(2, "0")
-  );
+  const gmt8 = new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
+  const y = gmt8.getUTCFullYear();
+  const M = String(gmt8.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(gmt8.getUTCDate()).padStart(2, "0");
+  const h = String(gmt8.getUTCHours()).padStart(2, "0");
+  const m = String(gmt8.getUTCMinutes()).padStart(2, "0");
+  const s = String(gmt8.getUTCSeconds()).padStart(2, "0");
+  return `${y}-${M}-${d}T${h}:${m}:${s}+08:00`;
 }
 
 export const COE_STATUS_VALUES = [
