@@ -415,6 +415,34 @@ export default function COEModule({ userId }: COEModuleProps) {
                   </div>
                 </div>
 
+                {viewingRequest.remarks && (
+                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/5">
+                        <ArrowRight className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Remarks</span>
+                    </div>
+                    <p className="text-sm pl-9 whitespace-pre-wrap break-all">
+                      {viewingRequest.remarks}
+                    </p>
+                  </div>
+                )}
+
+                {viewingRequest.hr_remarks && (
+                  <div className="rounded-xl border border-amber-200/50 bg-amber-50/50 p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-amber-100">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-amber-700 uppercase">HR Remarks</span>
+                    </div>
+                    <p className="text-sm pl-9 whitespace-pre-wrap break-all italic text-amber-900">
+                      {viewingRequest.hr_remarks}
+                    </p>
+                  </div>
+                )}
+
                 {viewingRequest.status?.toUpperCase() !== "PENDING" && (
                   <div className="rounded-xl border bg-card p-4 space-y-3">
                     <div className="flex items-center justify-between">
@@ -447,34 +475,6 @@ export default function COEModule({ userId }: COEModuleProps) {
                         <span className="text-sm text-muted-foreground">Not yet uploaded</span>
                       )}
                     </div>
-                  </div>
-                )}
-
-                {viewingRequest.remarks && (
-                  <div className="rounded-xl border bg-card p-4 space-y-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-primary/5">
-                        <ArrowRight className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Remarks</span>
-                    </div>
-                    <p className="text-sm pl-9 whitespace-pre-wrap break-all">
-                      {viewingRequest.remarks}
-                    </p>
-                  </div>
-                )}
-
-                {viewingRequest.hr_remarks && (
-                  <div className="rounded-xl border border-amber-200/50 bg-amber-50/50 p-4 space-y-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-amber-100">
-                        <AlertCircle className="h-4 w-4 text-amber-600" />
-                      </div>
-                      <span className="text-xs font-semibold tracking-wider text-amber-700 uppercase">HR Remarks</span>
-                    </div>
-                    <p className="text-sm pl-9 whitespace-pre-wrap break-all italic text-amber-900">
-                      {viewingRequest.hr_remarks}
-                    </p>
                   </div>
                 )}
               </div>
