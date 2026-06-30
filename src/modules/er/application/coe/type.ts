@@ -21,6 +21,7 @@ export const COERequestSchema = z.object({
   approval_date: z.string().nullable().optional(),
   ecopy_file_url: z.string().nullable().optional(),
   doc_title: z.string().nullable().optional(),
+  remarks: z.string().nullable().optional(),
   hr_remarks: z.string().nullable().optional(),
   updated_at: z.string().nullable().optional(),
 });
@@ -30,6 +31,8 @@ export type COERequest = z.infer<typeof COERequestSchema>;
 export const CreateCOESchema = z.object({
   employee_id: z.number(),
   purpose: z.string().min(1, "Purpose is required"),
+  remarks: z.string().optional(),
+  request_date: z.string().optional(),
 });
 
 export type CreateCOEInput = z.infer<typeof CreateCOESchema>;

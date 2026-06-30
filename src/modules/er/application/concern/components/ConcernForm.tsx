@@ -13,34 +13,46 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useState, useRef } from "react";
 import { Paperclip, Upload, X, FileText } from "lucide-react";
 
-const SUBJECT_OPTIONS = [
-  "Harassment or Discrimination",
-  "Workplace Conflict",
-  "Policy Violation",
-  "Salary or Benefits",
-  "Workload or Scheduling",
-  "Health or Safety",
-  "Ethics or Misconduct",
-  "Supervisor Relations",
-  "Co-worker Relations",
-  "Other",
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const OTHER_VALUE = "__other__";
+
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-matroska",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
-const OTHER_VALUE = "__other__";
+const ALLOWED_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm", ".mov", ".avi", ".mkv", ".doc", ".docx"];
+
+const SUBJECT_OPTIONS = [
+  { value: "Harassment or Discrimination", label: "Harassment or Discrimination" },
+  { value: "Workplace Conflict", label: "Workplace Conflict" },
+  { value: "Policy Violation", label: "Policy Violation" },
+  { value: "Salary or Benefits", label: "Salary or Benefits" },
+  { value: "Workload or Scheduling", label: "Workload or Scheduling" },
+  { value: "Health or Safety", label: "Health or Safety" },
+  { value: "Ethics or Misconduct", label: "Ethics or Misconduct" },
+  { value: "Supervisor Relations", label: "Supervisor Relations" },
+  { value: "Co-worker Relations", label: "Co-worker Relations" },
+  { value: OTHER_VALUE, label: "Other" },
+];
 
 const FormSchema = z.object({
   subject_of_concern: z.string().min(1, "Subject is required"),
@@ -59,7 +71,7 @@ interface ConcernFormProps {
 export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }: ConcernFormProps) {
   const initialSubject = initialData?.subject_of_concern ?? "";
   const isInitialOther =
-    initialSubject !== "" && !SUBJECT_OPTIONS.includes(initialSubject);
+    initialSubject !== "" && !SUBJECT_OPTIONS.some((o) => o.value === initialSubject);
 
   const [isOther, setIsOther] = useState(isInitialOther);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -85,10 +97,31 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    if (!e.target.files) return;
+    const el = document.getElementById("file-error");
+    if (el) el.textContent = "";
+    const incoming = Array.from(e.target.files);
+    const valid: File[] = [];
+    const errors: string[] = [];
+    for (const f of incoming) {
+      const extOk = ALLOWED_MIME_TYPES.includes(f.type) ||
+        ALLOWED_EXTENSIONS.some((ext) => f.name.toLowerCase().endsWith(ext));
+      if (!extOk) {
+        errors.push(`"${f.name}" has an unsupported file type`);
+        continue;
+      }
+      if (f.size > MAX_FILE_SIZE) {
+        errors.push(`"${f.name}" exceeds the 10MB limit`);
+        continue;
+      }
+      valid.push(f);
     }
+    if (errors.length > 0) {
+      const msg = errors.length === 1 ? errors[0] : `${errors.length} files rejected:\n${errors.join("\n")}`;
+      const el = document.getElementById("file-error");
+      if (el) el.textContent = msg;
+    }
+    setSelectedFiles((prev) => [...prev, ...valid]);
     e.target.value = "";
   };
 
@@ -119,23 +152,12 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
           render={({ field }) => (
             <FormItem>
               <FormLabel>Subject of Concern</FormLabel>
-              <Select
-                value={isOther ? OTHER_VALUE : field.value || undefined}
+              <SearchableSelect
+                options={SUBJECT_OPTIONS}
+                value={isOther ? OTHER_VALUE : field.value || ""}
                 onValueChange={handleSelectChange}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {SUBJECT_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select subject"
+              />
               {isOther && (
                 <Input
                   placeholder="Enter your subject..."
@@ -201,14 +223,16 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-xs text-muted-foreground">
-              Click to attach files (PDF, images, documents)
-            </span>
+              <span className="text-xs text-muted-foreground">
+                Click to attach files
+              </span>
           </div>
-          <input
+          <p id="file-error" className="text-xs text-destructive min-h-[1em]"></p>
+            <input
             ref={fileInputRef}
             type="file"
             multiple
+            accept={ALLOWED_MIME_TYPES.join(",")}
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -220,7 +244,7 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
                   className="flex items-center gap-2 p-2 rounded-lg bg-muted/20 border min-w-0 w-full"
                 >
                   <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="text-xs font-medium truncate flex-1">{file.name}</span>
+                  <span className="text-xs font-medium [word-break:break-word] flex-1 min-w-0">{file.name}</span>
                   <span className="text-xs text-muted-foreground shrink-0">{formatFileSize(file.size)}</span>
                   <button
                     type="button"

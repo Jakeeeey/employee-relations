@@ -5,7 +5,6 @@ import { Concern } from "../type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
-import { format, isValid } from "date-fns";
 import {
   Table,
   TableBody,
@@ -39,11 +38,17 @@ function formatStatus(status: string): string {
     .join(" ");
 }
 
-function formatDate(val: string | null | undefined, formatStr: string): string {
+function formatDate(val: string | null | undefined, _formatStr: string): string {
   if (!val) return "-";
   try {
-    const date = new Date(val);
-    return isValid(date) ? format(date, formatStr) : "-";
+    const normalized = val.endsWith("Z") || val.includes("+") ? val : val + "+08:00";
+    const ms = Date.parse(normalized);
+    if (isNaN(ms)) return "-";
+    const opts: Intl.DateTimeFormatOptions =
+      _formatStr === "PPP"
+        ? { year: "numeric", month: "long", day: "numeric" }
+        : { year: "numeric", month: "short", day: "2-digit" };
+    return new Intl.DateTimeFormat("en-US", { ...opts, timeZone: "Asia/Manila" }).format(ms);
   } catch {
     return "-";
   }

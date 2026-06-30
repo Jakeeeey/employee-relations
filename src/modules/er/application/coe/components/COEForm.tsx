@@ -7,6 +7,12 @@ import { z } from "zod";
 import { COERequest } from "../type";
 import { Button } from "@/components/ui/button";
 import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   Form,
   FormControl,
   FormField,
@@ -14,14 +20,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Check, ChevronDown } from "lucide-react";
 
 const PURPOSE_OPTIONS = [
   "Employment Verification",
@@ -32,42 +33,35 @@ const PURPOSE_OPTIONS = [
   "Transfer",
 ];
 
-const OTHER_VALUE = "__other__";
-
 const FormSchema = z.object({
   purpose: z.string().min(1, "Purpose is required"),
+  remarks: z.string().optional(),
 });
 type FormValues = z.infer<typeof FormSchema>;
 
 interface COEFormProps {
   initialData?: COERequest;
-  onSubmit: (data: { purpose: string }) => void;
+  onSubmit: (data: { purpose: string; remarks?: string }) => void;
   isLoading?: boolean;
 }
 
 export function COEForm({ initialData, onSubmit, isLoading }: COEFormProps) {
-  const initialPurpose = initialData?.purpose ?? "";
-  const isInitialOther =
-    initialPurpose !== "" && !PURPOSE_OPTIONS.includes(initialPurpose);
-
-  const [isOther, setIsOther] = useState(isInitialOther);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [search, setSearch] = useState("");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      purpose: initialPurpose,
+      purpose: initialData?.purpose ?? "",
+      remarks: initialData?.remarks ?? "",
     },
   });
 
-  const handleSelectChange = (value: string) => {
-    if (value === OTHER_VALUE) {
-      setIsOther(true);
-      form.setValue("purpose", "");
-    } else {
-      setIsOther(false);
-      form.setValue("purpose", value);
-    }
-  };
+  const purposeValue = form.watch("purpose"); // eslint-disable-line react-hooks/incompatible-library
+
+  const filteredOptions = search
+    ? PURPOSE_OPTIONS.filter((o) => o.toLowerCase().includes(search.toLowerCase()))
+    : PURPOSE_OPTIONS;
 
   return (
     <Form {...form}>
@@ -76,34 +70,84 @@ export function COEForm({ initialData, onSubmit, isLoading }: COEFormProps) {
           control={form.control}
           name="purpose"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="relative">
               <FormLabel>Purpose</FormLabel>
-              <Select
-                value={isOther ? OTHER_VALUE : field.value || undefined}
-                onValueChange={handleSelectChange}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select purpose" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {PURPOSE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value={OTHER_VALUE}>Other (specify)</SelectItem>
-                </SelectContent>
-              </Select>
-              {isOther && (
-                <Input
-                  placeholder="Enter your purpose..."
-                  value={field.value ?? ""}
-                  onChange={(e) => form.setValue("purpose", e.target.value)}
-                  className="mt-2"
-                />
+              <FormControl>
+                <div className="relative">
+                  <Input
+                    {...field}
+                    placeholder="Type a purpose or select from suggestions..."
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      setSearch(e.target.value);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowSuggestions(!showSuggestions)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
+              </FormControl>
+              {showSuggestions && (
+                <div className="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
+                  <Command>
+                    <CommandList>
+                      <CommandGroup>
+                        {filteredOptions.length === 0 ? (
+                          <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                            {search ? "No matching suggestions. Continue typing..." : "Type to see suggestions"}
+                          </div>
+                        ) : (
+                          filteredOptions.map((option) => (
+                            <CommandItem
+                              key={option}
+                              value={option}
+                              onSelect={() => {
+                                field.onChange(option);
+                                setShowSuggestions(false);
+                                setSearch("");
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  purposeValue === option ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {option}
+                            </CommandItem>
+                          ))
+                        )}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </div>
               )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="remarks"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Remarks / Reason</FormLabel>
+              <FormControl>
+                <textarea
+                  {...field}
+                  placeholder="Optional notes or reason for the request..."
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
     const validatedData = CreateCOESchema.parse({
       ...body,
       employee_id: employeeId,
+      request_date: new Date().toISOString(),
     });
 
     const newRequest = await COEService.create(validatedData);

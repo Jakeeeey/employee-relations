@@ -1,5 +1,24 @@
 import { z } from "zod";
 
+export function getGMT8Timestamp(): string {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const get = (type: string): string =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
+}
+
 export const CONCERN_STATUS_VALUES = [
   "PENDING",
   "IN_REVIEW",
@@ -28,6 +47,7 @@ export const CreateConcernSchema = z.object({
   subject_of_concern: z.string().min(1, "Subject is required"),
   concern: z.string().min(1, "Concern description is required"),
   is_anonymous: z.boolean().default(false),
+  created_at: z.string().optional(),
 });
 
 export type CreateConcernInput = z.infer<typeof CreateConcernSchema>;

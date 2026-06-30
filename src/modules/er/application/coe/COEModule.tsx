@@ -8,7 +8,8 @@ import { COERequest } from "./type";
 import { getFileProxyUrl } from "./fileProxy";
 import { Button } from "@/components/ui/button";
 import { Plus, RotateCcw, AlertCircle, Download, FileText, Loader2, X, ArrowRight, Calendar, Clock, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
+
+
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,20 @@ const statusVariantMap: Record<string, "default" | "secondary" | "destructive" |
 
 function formatStatus(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
+
+function formatGMT8(val: string | null | undefined): string {
+  if (!val) return "-";
+  try {
+    let s = String(val).trim();
+    if (s.includes(" ") && !s.includes("T")) s = s.replace(" ", "T");
+    if (!/[zZ]$/.test(s) && !/[+-]\d{2}:\d{2}$/.test(s)) s = s + "+08:00";
+    const ms = Date.parse(s);
+    if (isNaN(ms)) return "-";
+    return new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila" }).format(ms);
+  } catch {
+    return "-";
+  }
 }
 
 function isPreviewable(status: string | null | undefined): boolean {
@@ -100,11 +115,11 @@ export default function COEModule({ userId }: COEModuleProps) {
     setIsPreviewOpen(true);
   };
 
-  const onSubmit = async (data: { purpose: string }) => {
+  const onSubmit = async (data: { purpose: string; remarks?: string }) => {
     if (editingRequest) {
       await updateRequest(editingRequest.id!, { purpose: data.purpose });
     } else {
-      await createRequest({ employee_id: userId, purpose: data.purpose });
+      await createRequest({ employee_id: userId, purpose: data.purpose, remarks: data.remarks || undefined });
     }
     setIsDialogOpen(false);
   };
@@ -353,9 +368,6 @@ export default function COEModule({ userId }: COEModuleProps) {
                     <DialogTitle className="text-lg font-bold tracking-tight">
                       COE Request Details
                     </DialogTitle>
-                    <p className="text-xs font-medium opacity-70 mt-0.5">
-                      Reference #{viewingRequest.id}
-                    </p>
                   </div>
                   <Badge variant={statusVariantMap[viewingRequest.status?.toUpperCase() ?? ""] ?? "outline"}
                     className={viewingRequest.status?.toUpperCase() === "RELEASED" ? "bg-green-600 text-white dark:bg-green-500 dark:text-white" : ""}>
@@ -386,9 +398,7 @@ export default function COEModule({ userId }: COEModuleProps) {
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Request Date</span>
                     </div>
                     <p className="text-sm font-medium pl-9">
-                      {viewingRequest.request_date
-                        ? format(new Date(viewingRequest.request_date), "PPP")
-                        : "-"}
+                      {formatGMT8(viewingRequest.request_date)}
                     </p>
                   </div>
 
@@ -400,9 +410,7 @@ export default function COEModule({ userId }: COEModuleProps) {
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Approval Date</span>
                     </div>
                     <p className="text-sm font-medium pl-9">
-                      {viewingRequest.approval_date
-                        ? format(new Date(viewingRequest.approval_date), "PPP")
-                        : "-"}
+                      {formatGMT8(viewingRequest.approval_date)}
                     </p>
                   </div>
                 </div>
@@ -439,6 +447,20 @@ export default function COEModule({ userId }: COEModuleProps) {
                         <span className="text-sm text-muted-foreground">Not yet uploaded</span>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {viewingRequest.remarks && (
+                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/5">
+                        <ArrowRight className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Remarks</span>
+                    </div>
+                    <p className="text-sm pl-9 whitespace-pre-wrap break-all">
+                      {viewingRequest.remarks}
+                    </p>
                   </div>
                 )}
 
