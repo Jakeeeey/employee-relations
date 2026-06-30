@@ -55,7 +55,7 @@ export function COETable({ data, onView }: COETableProps) {
     {
       accessorKey: "purpose",
       header: "Purpose",
-      cell: ({ row }) => <span>{row.getValue("purpose") as string}</span>,
+      cell: ({ row }) => <span className="[word-break:break-word]">{row.getValue("purpose") as string}</span>,
     },
     {
       accessorKey: "request_date",
