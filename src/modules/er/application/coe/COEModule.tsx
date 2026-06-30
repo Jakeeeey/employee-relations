@@ -8,7 +8,8 @@ import { COERequest } from "./type";
 import { getFileProxyUrl } from "./fileProxy";
 import { Button } from "@/components/ui/button";
 import { Plus, RotateCcw, AlertCircle, Download, FileText, Loader2, X, ArrowRight, Calendar, Clock, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
+
+
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,18 @@ const statusVariantMap: Record<string, "default" | "secondary" | "destructive" |
 
 function formatStatus(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
+
+function formatGMT8(val: string | null | undefined): string {
+  if (!val) return "-";
+  try {
+    const normalized = val.endsWith("Z") || val.includes("+") ? val : val + "Z";
+    const ms = Date.parse(normalized);
+    if (isNaN(ms)) return "-";
+    return new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila" }).format(ms);
+  } catch {
+    return "-";
+  }
 }
 
 function isPreviewable(status: string | null | undefined): boolean {
@@ -386,9 +399,7 @@ export default function COEModule({ userId }: COEModuleProps) {
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Request Date</span>
                     </div>
                     <p className="text-sm font-medium pl-9">
-                      {viewingRequest.request_date
-                        ? format(new Date(viewingRequest.request_date), "PPP")
-                        : "-"}
+                      {formatGMT8(viewingRequest.request_date)}
                     </p>
                   </div>
 
@@ -400,9 +411,7 @@ export default function COEModule({ userId }: COEModuleProps) {
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Approval Date</span>
                     </div>
                     <p className="text-sm font-medium pl-9">
-                      {viewingRequest.approval_date
-                        ? format(new Date(viewingRequest.approval_date), "PPP")
-                        : "-"}
+                      {formatGMT8(viewingRequest.approval_date)}
                     </p>
                   </div>
                 </div>

@@ -98,11 +98,12 @@ export class COEService {
    * @returns {Promise<COERequest>} The created record.
    */
   static async create(data: CreateCOEInput): Promise<COERequest> {
-    const payload = {
+    const payload: Record<string, unknown> = {
       employee_id: data.employee_id,
       purpose: data.purpose,
       status: "PENDING",
     };
+    if (data.request_date) payload.request_date = data.request_date;
 
     const res = await fetch(`${API_BASE_URL}/items/coe_requests`, {
       method: "POST",

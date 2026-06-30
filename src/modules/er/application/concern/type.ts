@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+export function getGMT8Timestamp(): string {
+  const now = new Date();
+  const gmt8 = new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
+  const y = gmt8.getUTCFullYear();
+  const M = String(gmt8.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(gmt8.getUTCDate()).padStart(2, "0");
+  const h = String(gmt8.getUTCHours()).padStart(2, "0");
+  const m = String(gmt8.getUTCMinutes()).padStart(2, "0");
+  const s = String(gmt8.getUTCSeconds()).padStart(2, "0");
+  return `${y}-${M}-${d}T${h}:${m}:${s}+08:00`;
+}
+
 export const CONCERN_STATUS_VALUES = [
   "PENDING",
   "IN_REVIEW",
@@ -28,6 +40,7 @@ export const CreateConcernSchema = z.object({
   subject_of_concern: z.string().min(1, "Subject is required"),
   concern: z.string().min(1, "Concern description is required"),
   is_anonymous: z.boolean().default(false),
+  created_at: z.string().optional(),
 });
 
 export type CreateConcernInput = z.infer<typeof CreateConcernSchema>;

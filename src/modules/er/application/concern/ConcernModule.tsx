@@ -11,7 +11,8 @@ import {
   AlertTriangle, Paperclip, Eye, Download, Image as ImageIcon, FileVideo,
   FileAudio, FileSpreadsheet, FileWarning,
 } from "lucide-react";
-import { format } from "date-fns";
+
+
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,18 @@ function formatStatus(status: string): string {
     .split("_")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+function formatGMT8(val: string | null | undefined): string {
+  if (!val) return "-";
+  try {
+    const normalized = val.endsWith("Z") || val.includes("+") ? val : val + "Z";
+    const ms = Date.parse(normalized);
+    if (isNaN(ms)) return "-";
+    return new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila" }).format(ms);
+  } catch {
+    return "-";
+  }
 }
 
 interface ConcernModuleProps {
@@ -400,9 +413,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Filed At</span>
                     </div>
                   <p className="text-sm font-medium pl-9">
-                    {viewingConcern.created_at
-                        ? format(new Date(viewingConcern.created_at), "PPP")
-                        : "-"}
+                    {formatGMT8(viewingConcern.created_at)}
                     </p>
                   </div>
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ConcernService } from "@/modules/er/application/concern/services/concernService";
-import { CreateConcernSchema } from "@/modules/er/application/concern/type";
+import { CreateConcernSchema, getGMT8Timestamp } from "@/modules/er/application/concern/type";
 import { ZodError } from "zod";
 
 const COOKIE_NAME = "vos_access_token";
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
     const validatedData = CreateConcernSchema.parse({
       ...body,
       user_id: userId,
+      created_at: getGMT8Timestamp(),
     });
 
     const newConcern = await ConcernService.create(validatedData);

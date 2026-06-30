@@ -43,13 +43,14 @@ export class ConcernService {
   }
 
   static async create(data: CreateConcernInput): Promise<Concern> {
-    const payload = {
+    const payload: Record<string, unknown> = {
       user_id: data.user_id,
       subject_of_concern: data.subject_of_concern,
       concern: data.concern,
       is_anonymous: data.is_anonymous,
       status: "PENDING",
     };
+    if (data.created_at) payload.created_at = data.created_at;
 
     const res = await fetch(`${API_BASE_URL}/items/employee_concerns`, {
       method: "POST",

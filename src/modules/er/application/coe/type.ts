@@ -1,5 +1,22 @@
 import { z } from "zod";
 
+export function getGMT8Timestamp(): string {
+  const now = new Date();
+  return (
+    now.getUTCFullYear() +
+    "-" +
+    String(now.getUTCMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(now.getUTCDate()).padStart(2, "0") +
+    " " +
+    String(now.getUTCHours()).padStart(2, "0") +
+    ":" +
+    String(now.getUTCMinutes()).padStart(2, "0") +
+    ":" +
+    String(now.getUTCSeconds()).padStart(2, "0")
+  );
+}
+
 export const COE_STATUS_VALUES = [
   "PENDING",
   "APPROVED",
@@ -30,6 +47,7 @@ export type COERequest = z.infer<typeof COERequestSchema>;
 export const CreateCOESchema = z.object({
   employee_id: z.number(),
   purpose: z.string().min(1, "Purpose is required"),
+  request_date: z.string().optional(),
 });
 
 export type CreateCOEInput = z.infer<typeof CreateCOESchema>;
