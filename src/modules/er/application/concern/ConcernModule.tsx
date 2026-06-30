@@ -339,7 +339,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg overflow-hidden max-sm:max-h-[85vh] max-sm:overflow-y-auto">
+        <DialogContent className="sm:max-w-lg overflow-hidden max-sm:max-h-[85vh] max-sm:overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>New Concern</DialogTitle>
           </DialogHeader>
@@ -352,7 +352,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent showCloseButton={false} className="sm:max-w-lg p-0 rounded-2xl overflow-hidden max-sm:max-h-[85vh] max-sm:overflow-y-auto">
+        <DialogContent showCloseButton={false} className="sm:max-w-lg p-0 rounded-2xl overflow-hidden max-sm:max-h-[85vh] max-sm:overflow-y-auto" aria-describedby={undefined}>
           {viewingConcern && (
             <>
               <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-4 border-b">
@@ -506,6 +506,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
         <DialogContent
           showCloseButton={false}
           className="sm:max-w-[900px] overflow-hidden p-0 rounded-2xl border-2 shadow-2xl max-sm:max-h-[85vh] max-sm:overflow-y-auto"
+          aria-describedby={undefined}
         >
           {previewUrl && (() => {
             const kind = previewKind(previewFileType, previewTitle);

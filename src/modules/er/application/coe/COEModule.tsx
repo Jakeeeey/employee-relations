@@ -280,7 +280,7 @@ export default function COEModule({ userId }: COEModuleProps) {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>
               {editingRequest ? "Edit COE Request" : "New COE Request"}
@@ -295,7 +295,7 @@ export default function COEModule({ userId }: COEModuleProps) {
       </Dialog>
 
       <Dialog open={isPreviewOpen} onOpenChange={(open) => { if (!open) { setIsPreviewOpen(false); setPreviewUrl(null); } }}>
-        <DialogContent showCloseButton={false} className="sm:max-w-[900px] overflow-hidden p-0 rounded-2xl border-2 shadow-2xl">
+        <DialogContent showCloseButton={false} className="sm:max-w-[900px] overflow-hidden p-0 rounded-2xl border-2 shadow-2xl" aria-describedby={undefined}>
           <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-3">
             <div className="flex items-start gap-3">
               <div className="p-2.5 bg-primary/10 rounded-xl shrink-0">
@@ -356,7 +356,7 @@ export default function COEModule({ userId }: COEModuleProps) {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent showCloseButton={false} className="sm:max-w-lg overflow-hidden p-0 rounded-2xl">
+        <DialogContent showCloseButton={false} className="sm:max-w-lg overflow-hidden p-0 rounded-2xl" aria-describedby={undefined}>
           {viewingRequest && (
             <>
               <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-4 border-b">
@@ -386,8 +386,8 @@ export default function COEModule({ userId }: COEModuleProps) {
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Purpose</span>
                     </div>
                   </div>
-                  <p className="text-sm font-medium pl-9">{viewingRequest.purpose}</p>
-                </div>
+                   <p className="text-sm font-medium pl-9 [word-break:break-word]">{viewingRequest.purpose}</p>
+                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="rounded-xl border bg-card p-4 space-y-3">
