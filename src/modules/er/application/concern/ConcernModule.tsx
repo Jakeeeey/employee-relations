@@ -326,7 +326,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-sm:max-h-[85vh] max-sm:overflow-y-auto">
+        <DialogContent className="sm:max-w-lg overflow-hidden max-sm:max-h-[85vh] max-sm:overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Concern</DialogTitle>
           </DialogHeader>
@@ -339,7 +339,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent showCloseButton={false} className="sm:max-w-lg p-0 rounded-2xl max-sm:max-h-[85vh] max-sm:overflow-y-auto">
+        <DialogContent showCloseButton={false} className="sm:max-w-lg p-0 rounded-2xl overflow-hidden max-sm:max-h-[85vh] max-sm:overflow-y-auto">
           {viewingConcern && (
             <>
               <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-4 border-b">
@@ -365,7 +365,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
               </div>
 
               <div className="p-5 space-y-4">
-                <div className="rounded-xl border bg-card p-4 space-y-3">
+                <div className="rounded-xl border bg-card p-4 space-y-3 [word-break:break-word]">
                   <div className="flex items-center gap-2.5">
                     <div className="p-1.5 rounded-lg bg-primary/5">
                       <ArrowRight className="h-4 w-4 text-primary" />
@@ -377,7 +377,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                   </p>
                 </div>
 
-                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                  <div className="rounded-xl border bg-card p-4 space-y-3 [word-break:break-word]">
                     <div className="flex items-center gap-2.5">
                       <div className="p-1.5 rounded-lg bg-primary/5">
                         <FileText className="h-4 w-4 text-primary" />
@@ -385,28 +385,28 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Concern</span>
                     </div>
                     <div className="max-h-[200px] overflow-y-auto pl-9">
-                      <p className="text-sm whitespace-pre-wrap break-words">
+                      <p className="text-sm whitespace-pre-wrap">
                         {viewingConcern.concern}
                       </p>
                     </div>
                   </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                  <div className="rounded-xl border bg-card p-4 space-y-3 [word-break:break-word]">
                     <div className="flex items-center gap-2.5">
                       <div className="p-1.5 rounded-lg bg-primary/5">
                         <Calendar className="h-4 w-4 text-primary" />
                       </div>
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Filed At</span>
                     </div>
-                    <p className="text-sm font-medium pl-9">
-                      {viewingConcern.created_at
+                  <p className="text-sm font-medium pl-9">
+                    {viewingConcern.created_at
                         ? format(new Date(viewingConcern.created_at), "PPP")
                         : "-"}
                     </p>
                   </div>
 
-                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                  <div className="rounded-xl border bg-card p-4 space-y-3 [word-break:break-word]">
                     <div className="flex items-center gap-2.5">
                       <div className="p-1.5 rounded-lg bg-primary/5">
                         <AlertTriangle className="h-4 w-4 text-primary" />
@@ -447,7 +447,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                             <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tint}`}>
                               <Icon className="h-4 w-4" />
                             </div>
-                            <span className="text-sm font-medium truncate flex-1 max-w-[260px]">
+                            <span className="text-sm font-medium [word-break:break-word] flex-1 max-w-[260px]">
                               {att.file_name}
                             </span>
                             <Button
@@ -509,7 +509,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                         <Icon className="h-5 w-5 stroke-[2.5px]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <DialogTitle className="text-lg font-bold tracking-tight line-clamp-1">
+                        <DialogTitle className="text-lg font-bold tracking-tight line-clamp-1 [word-break:break-word]">
                           {previewTitle}
                         </DialogTitle>
                         <p className="text-xs font-medium opacity-70">
@@ -598,7 +598,7 @@ function TextPreview({ url }: { url: string }) {
           Loading preview...
         </div>
       ) : (
-        <pre className="text-xs font-mono whitespace-pre-wrap break-words p-4 text-foreground/90 select-none pointer-events-none">
+        <pre className="text-xs font-mono whitespace-pre-wrap [word-break:break-word] p-4 text-foreground/90 select-none pointer-events-none">
           {textContent}
         </pre>
       )}

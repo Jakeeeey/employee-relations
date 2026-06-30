@@ -247,7 +247,7 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
                   className="flex items-center gap-2 p-2 rounded-lg bg-muted/20 border min-w-0 w-full"
                 >
                   <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="text-xs font-medium truncate flex-1">{file.name}</span>
+                  <span className="text-xs font-medium [word-break:break-word] flex-1 min-w-0">{file.name}</span>
                   <span className="text-xs text-muted-foreground shrink-0">{formatFileSize(file.size)}</span>
                   <button
                     type="button"
