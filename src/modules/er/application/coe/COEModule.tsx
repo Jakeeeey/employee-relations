@@ -115,11 +115,11 @@ export default function COEModule({ userId }: COEModuleProps) {
     setIsPreviewOpen(true);
   };
 
-  const onSubmit = async (data: { purpose: string }) => {
+  const onSubmit = async (data: { purpose: string; remarks?: string }) => {
     if (editingRequest) {
       await updateRequest(editingRequest.id!, { purpose: data.purpose });
     } else {
-      await createRequest({ employee_id: userId, purpose: data.purpose });
+      await createRequest({ employee_id: userId, purpose: data.purpose, remarks: data.remarks || undefined });
     }
     setIsDialogOpen(false);
   };
@@ -447,6 +447,20 @@ export default function COEModule({ userId }: COEModuleProps) {
                         <span className="text-sm text-muted-foreground">Not yet uploaded</span>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {viewingRequest.remarks && (
+                  <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/5">
+                        <ArrowRight className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Remarks</span>
+                    </div>
+                    <p className="text-sm pl-9 whitespace-pre-wrap break-all">
+                      {viewingRequest.remarks}
+                    </p>
                   </div>
                 )}
 

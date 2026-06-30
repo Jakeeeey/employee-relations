@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { COERequest } from "../type";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Form,
   FormControl,
@@ -14,7 +20,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Check, ChevronDown } from "lucide-react";
 
 const PURPOSE_OPTIONS = [
   "Employment Verification",
@@ -27,78 +35,33 @@ const PURPOSE_OPTIONS = [
 
 const FormSchema = z.object({
   purpose: z.string().min(1, "Purpose is required"),
+  remarks: z.string().optional(),
 });
 type FormValues = z.infer<typeof FormSchema>;
 
 interface COEFormProps {
   initialData?: COERequest;
-  onSubmit: (data: { purpose: string }) => void;
+  onSubmit: (data: { purpose: string; remarks?: string }) => void;
   isLoading?: boolean;
 }
 
 export function COEForm({ initialData, onSubmit, isLoading }: COEFormProps) {
-  const [open, setOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [highlightIndex, setHighlightIndex] = useState(-1);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [search, setSearch] = useState("");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       purpose: initialData?.purpose ?? "",
+      remarks: initialData?.remarks ?? "",
     },
   });
 
-  const purposeValue = form.watch("purpose");
+  const purposeValue = form.watch("purpose"); // eslint-disable-line react-hooks/incompatible-library
 
-  useEffect(() => {
-    if (!purposeValue) {
-      setSuggestions(PURPOSE_OPTIONS);
-      return;
-    }
-    const q = purposeValue.toLowerCase();
-    const filtered = PURPOSE_OPTIONS.filter((o) => o.toLowerCase().includes(q));
-    const matchesSelected = PURPOSE_OPTIONS.some((o) => o === purposeValue);
-    setSuggestions(matchesSelected ? [] : filtered);
-  }, [purposeValue]);
-
-  useEffect(() => {
-    if (!open) setHighlightIndex(-1);
-  }, [open]);
-
-  const handleSelect = (value: string) => {
-    form.setValue("purpose", value);
-    setOpen(false);
-    setHighlightIndex(-1);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!open) {
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        setOpen(true);
-        e.preventDefault();
-        return;
-      }
-    }
-    if (e.key === "ArrowDown") {
-      setHighlightIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
-      e.preventDefault();
-    } else if (e.key === "ArrowUp") {
-      setHighlightIndex((prev) => Math.max(prev - 1, 0));
-      e.preventDefault();
-    } else if (e.key === "Enter" && highlightIndex >= 0 && suggestions[highlightIndex]) {
-      handleSelect(suggestions[highlightIndex]);
-      e.preventDefault();
-    } else if (e.key === "Escape") {
-      setOpen(false);
-    }
-  };
-
-  const handleBlur = (e: React.FocusEvent) => {
-    if (listRef.current && listRef.current.contains(e.relatedTarget as Node)) return;
-    setTimeout(() => setOpen(false), 200);
-  };
+  const filteredOptions = search
+    ? PURPOSE_OPTIONS.filter((o) => o.toLowerCase().includes(search.toLowerCase()))
+    : PURPOSE_OPTIONS;
 
   return (
     <Form {...form}>
@@ -107,44 +70,83 @@ export function COEForm({ initialData, onSubmit, isLoading }: COEFormProps) {
           control={form.control}
           name="purpose"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="relative">
               <FormLabel>Purpose</FormLabel>
               <FormControl>
                 <div className="relative">
                   <Input
                     {...field}
-                    ref={(e) => {
-                      field.ref(e);
-                      (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = e;
+                    placeholder="Type a purpose or select from suggestions..."
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      setSearch(e.target.value);
                     }}
-                    placeholder="Type or select a purpose..."
-                    onFocus={() => setOpen(true)}
-                    onBlur={handleBlur}
-                    onKeyDown={handleKeyDown}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    className="pr-10"
                   />
-                  {open && suggestions.length > 0 && (
-                    <div
-                      ref={listRef}
-                      className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-lg border bg-popover p-1 shadow-md"
-                    >
-                      {suggestions.map((option, idx) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleSelect(option)}
-                          className={`w-full rounded-md px-3 py-1.5 text-left text-sm ${
-                            idx === highlightIndex
-                              ? "bg-accent text-accent-foreground"
-                              : "text-popover-foreground"
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowSuggestions(!showSuggestions)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
                 </div>
+              </FormControl>
+              {showSuggestions && (
+                <div className="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
+                  <Command>
+                    <CommandList>
+                      <CommandGroup>
+                        {filteredOptions.length === 0 ? (
+                          <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                            {search ? "No matching suggestions. Continue typing..." : "Type to see suggestions"}
+                          </div>
+                        ) : (
+                          filteredOptions.map((option) => (
+                            <CommandItem
+                              key={option}
+                              value={option}
+                              onSelect={() => {
+                                field.onChange(option);
+                                setShowSuggestions(false);
+                                setSearch("");
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  purposeValue === option ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {option}
+                            </CommandItem>
+                          ))
+                        )}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </div>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="remarks"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Remarks / Reason</FormLabel>
+              <FormControl>
+                <textarea
+                  {...field}
+                  placeholder="Optional notes or reason for the request..."
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

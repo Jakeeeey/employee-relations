@@ -98,6 +98,8 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
+    const el = document.getElementById("file-error");
+    if (el) el.textContent = "";
     const incoming = Array.from(e.target.files);
     const valid: File[] = [];
     const errors: string[] = [];
@@ -121,11 +123,6 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
     }
     setSelectedFiles((prev) => [...prev, ...valid]);
     e.target.value = "";
-  };
-
-  const clearFileError = () => {
-    const el = document.getElementById("file-error");
-    if (el) el.textContent = "";
   };
 
   const removeFile = (index: number) => {

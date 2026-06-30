@@ -104,6 +104,7 @@ export class COEService {
       status: "PENDING",
     };
     if (data.request_date) payload.request_date = data.request_date;
+    if (data.remarks) payload.remarks = data.remarks;
 
     const res = await fetch(`${API_BASE_URL}/items/coe_requests`, {
       method: "POST",
