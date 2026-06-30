@@ -21,7 +21,25 @@ import { Switch } from "@/components/ui/switch";
 import { useState, useRef } from "react";
 import { Paperclip, Upload, X, FileText } from "lucide-react";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const OTHER_VALUE = "__other__";
+
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-matroska",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+const ALLOWED_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm", ".mov", ".avi", ".mkv", ".doc", ".docx"];
 
 const SUBJECT_OPTIONS = [
   { value: "Harassment or Discrimination", label: "Harassment or Discrimination" },
@@ -79,11 +97,35 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    if (!e.target.files) return;
+    const incoming = Array.from(e.target.files);
+    const valid: File[] = [];
+    const errors: string[] = [];
+    for (const f of incoming) {
+      const extOk = ALLOWED_MIME_TYPES.includes(f.type) ||
+        ALLOWED_EXTENSIONS.some((ext) => f.name.toLowerCase().endsWith(ext));
+      if (!extOk) {
+        errors.push(`"${f.name}" has an unsupported file type`);
+        continue;
+      }
+      if (f.size > MAX_FILE_SIZE) {
+        errors.push(`"${f.name}" exceeds the 10MB limit`);
+        continue;
+      }
+      valid.push(f);
     }
+    if (errors.length > 0) {
+      const msg = errors.length === 1 ? errors[0] : `${errors.length} files rejected:\n${errors.join("\n")}`;
+      const el = document.getElementById("file-error");
+      if (el) el.textContent = msg;
+    }
+    setSelectedFiles((prev) => [...prev, ...valid]);
     e.target.value = "";
+  };
+
+  const clearFileError = () => {
+    const el = document.getElementById("file-error");
+    if (el) el.textContent = "";
   };
 
   const removeFile = (index: number) => {
@@ -184,14 +226,16 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-xs text-muted-foreground">
-              Click to attach files (PDF, images, documents)
-            </span>
+              <span className="text-xs text-muted-foreground">
+                Click to attach files
+              </span>
           </div>
-          <input
+          <p id="file-error" className="text-xs text-destructive min-h-[1em]"></p>
+            <input
             ref={fileInputRef}
             type="file"
             multiple
+            accept={ALLOWED_MIME_TYPES.join(",")}
             className="hidden"
             onChange={handleFileSelect}
           />
