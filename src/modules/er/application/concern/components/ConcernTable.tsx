@@ -41,7 +41,7 @@ function formatStatus(status: string): string {
 function formatDate(val: string | null | undefined, _formatStr: string): string {
   if (!val) return "-";
   try {
-    const normalized = val.endsWith("Z") || val.includes("+") ? val : val + "Z";
+    const normalized = val.endsWith("Z") || val.includes("+") ? val : val + "+08:00";
     const ms = Date.parse(normalized);
     if (isNaN(ms)) return "-";
     const opts: Intl.DateTimeFormatOptions =

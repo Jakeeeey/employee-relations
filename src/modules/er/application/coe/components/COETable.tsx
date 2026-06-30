@@ -30,8 +30,10 @@ function formatStatus(status: string): string {
 function formatDate(val: string | null | undefined, _formatStr: string): string {
   if (!val) return "-";
   try {
-    const normalized = val.endsWith("Z") || val.includes("+") ? val : val + "Z";
-    const ms = Date.parse(normalized);
+    let s = String(val).trim();
+    if (s.includes(" ") && !s.includes("T")) s = s.replace(" ", "T");
+    if (!/[zZ]$/.test(s) && !/[+-]\d{2}:\d{2}$/.test(s)) s = s + "+08:00";
+    const ms = Date.parse(s);
     if (isNaN(ms)) return "-";
     const opts: Intl.DateTimeFormatOptions =
       _formatStr === "PPP"

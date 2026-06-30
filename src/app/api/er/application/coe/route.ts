@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { COEService } from "@/modules/er/application/coe/services/coeService";
-import { CreateCOESchema, getGMT8Timestamp } from "@/modules/er/application/coe/type";
+import { CreateCOESchema } from "@/modules/er/application/coe/type";
 import { ZodError } from "zod";
 
 const COOKIE_NAME = "vos_access_token";
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     const validatedData = CreateCOESchema.parse({
       ...body,
       employee_id: employeeId,
-      request_date: getGMT8Timestamp(),
+      request_date: new Date().toISOString(),
     });
 
     const newRequest = await COEService.create(validatedData);

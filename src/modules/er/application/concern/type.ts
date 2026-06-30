@@ -2,14 +2,21 @@ import { z } from "zod";
 
 export function getGMT8Timestamp(): string {
   const now = new Date();
-  const gmt8 = new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
-  const y = gmt8.getUTCFullYear();
-  const M = String(gmt8.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(gmt8.getUTCDate()).padStart(2, "0");
-  const h = String(gmt8.getUTCHours()).padStart(2, "0");
-  const m = String(gmt8.getUTCMinutes()).padStart(2, "0");
-  const s = String(gmt8.getUTCSeconds()).padStart(2, "0");
-  return `${y}-${M}-${d}T${h}:${m}:${s}+08:00`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const get = (type: string): string =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
 }
 
 export const CONCERN_STATUS_VALUES = [

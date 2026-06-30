@@ -59,8 +59,10 @@ function formatStatus(status: string): string {
 function formatGMT8(val: string | null | undefined): string {
   if (!val) return "-";
   try {
-    const normalized = val.endsWith("Z") || val.includes("+") ? val : val + "Z";
-    const ms = Date.parse(normalized);
+    let s = String(val).trim();
+    if (s.includes(" ") && !s.includes("T")) s = s.replace(" ", "T");
+    if (!/[zZ]$/.test(s) && !/[+-]\d{2}:\d{2}$/.test(s)) s = s + "+08:00";
+    const ms = Date.parse(s);
     if (isNaN(ms)) return "-";
     return new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Manila" }).format(ms);
   } catch {
