@@ -13,34 +13,28 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useState, useRef } from "react";
 import { Paperclip, Upload, X, FileText } from "lucide-react";
 
-const SUBJECT_OPTIONS = [
-  "Harassment or Discrimination",
-  "Workplace Conflict",
-  "Policy Violation",
-  "Salary or Benefits",
-  "Workload or Scheduling",
-  "Health or Safety",
-  "Ethics or Misconduct",
-  "Supervisor Relations",
-  "Co-worker Relations",
-  "Other",
-];
-
 const OTHER_VALUE = "__other__";
+
+const SUBJECT_OPTIONS = [
+  { value: "Harassment or Discrimination", label: "Harassment or Discrimination" },
+  { value: "Workplace Conflict", label: "Workplace Conflict" },
+  { value: "Policy Violation", label: "Policy Violation" },
+  { value: "Salary or Benefits", label: "Salary or Benefits" },
+  { value: "Workload or Scheduling", label: "Workload or Scheduling" },
+  { value: "Health or Safety", label: "Health or Safety" },
+  { value: "Ethics or Misconduct", label: "Ethics or Misconduct" },
+  { value: "Supervisor Relations", label: "Supervisor Relations" },
+  { value: "Co-worker Relations", label: "Co-worker Relations" },
+  { value: OTHER_VALUE, label: "Other" },
+];
 
 const FormSchema = z.object({
   subject_of_concern: z.string().min(1, "Subject is required"),
@@ -59,7 +53,7 @@ interface ConcernFormProps {
 export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }: ConcernFormProps) {
   const initialSubject = initialData?.subject_of_concern ?? "";
   const isInitialOther =
-    initialSubject !== "" && !SUBJECT_OPTIONS.includes(initialSubject);
+    initialSubject !== "" && !SUBJECT_OPTIONS.some((o) => o.value === initialSubject);
 
   const [isOther, setIsOther] = useState(isInitialOther);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -119,23 +113,12 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
           render={({ field }) => (
             <FormItem>
               <FormLabel>Subject of Concern</FormLabel>
-              <Select
-                value={isOther ? OTHER_VALUE : field.value || undefined}
+              <SearchableSelect
+                options={SUBJECT_OPTIONS}
+                value={isOther ? OTHER_VALUE : field.value || ""}
                 onValueChange={handleSelectChange}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {SUBJECT_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select subject"
+              />
               {isOther && (
                 <Input
                   placeholder="Enter your subject..."
