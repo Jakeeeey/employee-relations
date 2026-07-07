@@ -7,8 +7,8 @@ import { useConcern } from "./hooks/useConcern";
 import { Concern, ConcernAttachment } from "./type";
 import { Button } from "@/components/ui/button";
 import {
-  Plus, RotateCcw, AlertCircle, FileText, Loader2, X, ArrowRight, Calendar,
-  AlertTriangle, Paperclip, Eye, Download, Image as ImageIcon, FileVideo,
+  Plus, RotateCcw, AlertCircle, FileText, Loader2, X, ArrowRight,
+  Paperclip, Eye, Download, Image as ImageIcon, FileVideo,
   FileAudio, FileSpreadsheet, FileWarning,
 } from "lucide-react";
 
@@ -352,7 +352,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent showCloseButton={false} className="sm:max-w-lg p-0 rounded-2xl overflow-hidden max-sm:max-h-[85vh] max-sm:overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent showCloseButton={false} className="sm:max-w-lg p-0 rounded-2xl max-h-[85vh] overflow-y-auto" aria-describedby={undefined}>
           {viewingConcern && (
             <>
               <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-4 border-b">
@@ -365,7 +365,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                       Concern Details
                     </DialogTitle>
                     <p className="text-xs font-medium opacity-70 mt-0.5">
-                      Reference #{viewingConcern.id}
+                      {formatGMT8(viewingConcern.created_at)}
                     </p>
                   </div>
                   <Badge
@@ -404,31 +404,7 @@ export default function ConcernModule({ userId }: ConcernModuleProps) {
                     </div>
                   </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="rounded-xl border bg-card p-4 space-y-3 [word-break:break-word]">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-primary/5">
-                        <Calendar className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Filed At</span>
-                    </div>
-                  <p className="text-sm font-medium pl-9">
-                    {formatGMT8(viewingConcern.created_at)}
-                    </p>
-                  </div>
 
-                  <div className="rounded-xl border bg-card p-4 space-y-3 [word-break:break-word]">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-primary/5">
-                        <AlertTriangle className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Anonymous</span>
-                    </div>
-                    <p className="text-sm font-medium pl-9">
-                      {viewingConcern.is_anonymous ? "Yes" : "No"}
-                    </p>
-                  </div>
-                </div>
 
                 <Separator className="my-2" />
 
