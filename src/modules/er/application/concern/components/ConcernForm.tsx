@@ -180,7 +180,7 @@ export function ConcernForm({ initialData, onSubmit, isLoading, uploadProgress }
               <FormControl>
                 <Textarea
                   placeholder="Provide a detailed description of your concern..."
-                  className="min-h-[140px] resize-y"
+                  className="min-h-[140px] max-h-[140px] resize-y overflow-y-auto"
                   {...field}
                 />
               </FormControl>

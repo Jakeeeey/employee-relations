@@ -356,7 +356,7 @@ export default function COEModule({ userId }: COEModuleProps) {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent showCloseButton={false} className="sm:max-w-lg overflow-hidden p-0 rounded-2xl" aria-describedby={undefined}>
+        <DialogContent showCloseButton={false} className="sm:max-w-lg max-h-[85vh] overflow-y-auto p-0 rounded-2xl" aria-describedby={undefined}>
           {viewingRequest && (
             <>
               <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-5 pb-4 border-b">
