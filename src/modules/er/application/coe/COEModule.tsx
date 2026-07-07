@@ -386,7 +386,9 @@ export default function COEModule({ userId }: COEModuleProps) {
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Purpose</span>
                     </div>
                   </div>
-                   <p className="text-sm font-medium pl-9 [word-break:break-word]">{viewingRequest.purpose}</p>
+                   <div className="pl-9 max-h-[150px] overflow-y-auto">
+                      <p className="text-sm font-medium [word-break:break-word]">{viewingRequest.purpose}</p>
+                    </div>
                  </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -423,9 +425,11 @@ export default function COEModule({ userId }: COEModuleProps) {
                       </div>
                       <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Remarks</span>
                     </div>
-                    <p className="text-sm pl-9 whitespace-pre-wrap break-all">
-                      {viewingRequest.remarks}
-                    </p>
+                    <div className="pl-9 max-h-[150px] overflow-y-auto">
+                      <p className="text-sm whitespace-pre-wrap break-all">
+                        {viewingRequest.remarks}
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -437,9 +441,11 @@ export default function COEModule({ userId }: COEModuleProps) {
                       </div>
                       <span className="text-xs font-semibold tracking-wider text-amber-700 uppercase">HR Remarks</span>
                     </div>
-                    <p className="text-sm pl-9 whitespace-pre-wrap break-all italic text-amber-900">
-                      {viewingRequest.hr_remarks}
-                    </p>
+                    <div className="pl-9 max-h-[150px] overflow-y-auto">
+                      <p className="text-sm whitespace-pre-wrap break-all italic text-amber-900">
+                        {viewingRequest.hr_remarks}
+                      </p>
+                    </div>
                   </div>
                 )}
 
