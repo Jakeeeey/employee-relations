@@ -44,25 +44,20 @@ export function SearchableSelect({
     }, [options, value]);
 
     return (
-        <Popover open={open} onOpenChange={setOpen} modal={true}>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className={cn("w-full justify-between items-center flex", !value && "text-muted-foreground", className)}
+                    className={cn("w-full justify-between", !value && "text-muted-foreground", className)}
                     disabled={disabled}
                 >
-                    <span className="truncate flex-1 text-left text-xs">{selectedLabel || placeholder}</span>
+                    {selectedLabel || placeholder}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent 
-                className="w-[var(--radix-popover-trigger-width)] min-w-[280px] max-w-[432px] p-0 pointer-events-auto" 
-                style={{ width: "var(--radix-popover-trigger-width)", pointerEvents: "auto" }} 
-                align="start"
-                onWheel={(e) => e.stopPropagation()}
-            >
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                 <Command>
                     <CommandInput placeholder={`Search ${placeholder.toLowerCase()}...`} />
                     <CommandList>
@@ -83,15 +78,14 @@ export function SearchableSelect({
                                         onValueChange(opt.value);
                                         setOpen(false);
                                     }}
-                                    className="flex items-center"
                                 >
                                     <Check
                                         className={cn(
-                                            "mr-2 h-4 w-4 shrink-0",
+                                            "mr-2 h-4 w-4",
                                             value === opt.value ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    <span className="truncate block flex-1 text-left pr-2 text-xs">{opt.label}</span>
+                                    {opt.label}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
