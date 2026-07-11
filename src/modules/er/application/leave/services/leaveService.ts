@@ -52,7 +52,49 @@ export class LeaveService {
       ...item,
       total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,
       department_id: item.department_id ? parseInt(String(item.department_id)) : null,
+      is_paid: item.is_paid === true || item.is_paid === 1 || String(item.is_paid) === "true",
     })) as LeaveRequest[];
+  }
+
+  static async fetchByUserId(userId: number): Promise<LeaveRequest[]> {
+    const res = await fetch(`${API_BASE_URL}/items/leave_request?filter[user_id][_eq]=${userId}&sort=-filed_at&limit=-1`, {
+      method: "GET",
+      headers: this.getHeaders(),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch leaves for user ${userId}: ${res.statusText} (${res.status})`);
+    }
+
+    const payload = await res.json();
+    const data = payload.data || payload || [];
+
+    return (Array.isArray(data) ? data : []).map((item: Record<string, unknown>) => ({
+      ...item,
+      total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,
+      department_id: item.department_id ? parseInt(String(item.department_id)) : null,
+      is_paid: item.is_paid === true || item.is_paid === 1 || String(item.is_paid) === "true",
+    })) as LeaveRequest[];
+  }
+
+  static async getWageManagement(userId: number): Promise<{ vacation_leave_per_year: number; sick_leave_per_year: number } | null> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/items/user_wage_management?filter[user_id][_eq]=${userId}`, {
+        method: "GET",
+        headers: this.getHeaders(),
+        cache: "no-store",
+      });
+      if (!res.ok) return null;
+      const { data } = await res.json();
+      if (!Array.isArray(data) || data.length === 0) return null;
+      return {
+        vacation_leave_per_year: Number(data[0].vacation_leave_per_year ?? 0),
+        sick_leave_per_year: Number(data[0].sick_leave_per_year ?? 0),
+      };
+    } catch {
+      return null;
+    }
   }
 
   static async create(data: CreateLeaveInput): Promise<LeaveRequest> {
@@ -77,6 +119,7 @@ export class LeaveService {
     return {
       ...createdData,
       total_days: createdData.total_days ? parseFloat(createdData.total_days) : 0,
+      is_paid: createdData.is_paid === true || createdData.is_paid === 1 || String(createdData.is_paid) === "true",
     } as LeaveRequest;
   }
 
@@ -102,6 +145,7 @@ export class LeaveService {
     return {
       ...updatedData,
       total_days: updatedData.total_days ? parseFloat(updatedData.total_days) : 0,
+      is_paid: updatedData.is_paid === true || updatedData.is_paid === 1 || String(updatedData.is_paid) === "true",
     } as LeaveRequest;
   }
 }
