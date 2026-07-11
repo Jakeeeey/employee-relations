@@ -28,7 +28,6 @@ export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFor
     vacation: { limit: number; used: number; remaining: number };
     sick: { limit: number; used: number; remaining: number };
   } | null>(null);
-  const [loadingBalance, setLoadingBalance] = useState(false);
 
   const form = useForm<CreateLeaveInput>({
     resolver: zodResolver(CreateLeaveSchema),
@@ -56,7 +55,6 @@ export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFor
     const fetchBalance = async () => {
       const activeUserId = userId || initialData?.user_id;
       if (!activeUserId) return;
-      setLoadingBalance(true);
       try {
         const excludeParam = initialData?.leave_id ? `&excludeLeaveId=${initialData.leave_id}` : "";
         const res = await fetch(`/api/er/application/leave/balance?userId=${activeUserId}${excludeParam}`);
@@ -66,8 +64,6 @@ export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFor
         }
       } catch (err) {
         console.error("Failed to fetch leave balance", err);
-      } finally {
-        setLoadingBalance(false);
       }
     };
 
