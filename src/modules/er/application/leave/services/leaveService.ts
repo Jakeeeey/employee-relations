@@ -48,6 +48,7 @@ export class LeaveService {
     const data = payload.data || payload || [];
     
     // Handle decimals if they come back as strings
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (Array.isArray(data) ? data : []).map((item: any) => ({
       ...item,
       total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,
@@ -70,6 +71,7 @@ export class LeaveService {
     const payload = await res.json();
     const data = payload.data || payload || [];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (Array.isArray(data) ? data : []).map((item: any) => ({
       ...item,
       total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,

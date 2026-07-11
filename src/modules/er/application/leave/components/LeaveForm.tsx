@@ -30,6 +30,7 @@ export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFor
   } | null>(null);
 
   const form = useForm<CreateLeaveInput>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(CreateLeaveSchema) as any,
     defaultValues: {
       leave_type: initialData?.leave_type || "vacation",
