@@ -30,7 +30,7 @@ export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFor
   } | null>(null);
 
   const form = useForm<CreateLeaveInput>({
-    resolver: zodResolver(CreateLeaveSchema),
+    resolver: zodResolver(CreateLeaveSchema) as any,
     defaultValues: {
       leave_type: initialData?.leave_type || "vacation",
       leave_start: initialData?.leave_start || null,

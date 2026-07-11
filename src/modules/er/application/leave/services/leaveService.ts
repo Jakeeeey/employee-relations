@@ -48,7 +48,7 @@ export class LeaveService {
     const data = payload.data || payload || [];
     
     // Handle decimals if they come back as strings
-    return (Array.isArray(data) ? data : []).map((item: Record<string, unknown>) => ({
+    return (Array.isArray(data) ? data : []).map((item: any) => ({
       ...item,
       total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,
       department_id: item.department_id ? parseInt(String(item.department_id)) : null,
@@ -70,7 +70,7 @@ export class LeaveService {
     const payload = await res.json();
     const data = payload.data || payload || [];
 
-    return (Array.isArray(data) ? data : []).map((item: Record<string, unknown>) => ({
+    return (Array.isArray(data) ? data : []).map((item: any) => ({
       ...item,
       total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,
       department_id: item.department_id ? parseInt(String(item.department_id)) : null,

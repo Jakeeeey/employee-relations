@@ -23,6 +23,7 @@ export const LeaveRequestSchema = z.object({
   approved_at: z.string().nullable().optional(),
   filed_at: z.string().optional(),
   emp_attatchment_uuid: z.string().nullable().optional(),
+  is_paid: z.boolean().default(false),
 });
 
 export type LeaveRequest = z.infer<typeof LeaveRequestSchema>;
