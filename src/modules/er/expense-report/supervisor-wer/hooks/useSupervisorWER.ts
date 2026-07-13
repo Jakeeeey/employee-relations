@@ -263,6 +263,23 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
       return;
     }
 
+    // Client-side validation: Ensure submission remarks are provided
+    if (!remarks || !remarks.trim()) {
+      toast.error("Submission Failed", {
+        description: "Submission remarks are required.",
+      });
+      return;
+    }
+
+    // Client-side validation: Ensure all lines have a valid receipt attachment
+    const missingAttachment = expenses.find((exp) => !exp.attachment_url);
+    if (missingAttachment) {
+      toast.error("Submission Failed", {
+        description: "Cannot submit weekly report: all lines must have a valid receipt attachment.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const ids = expenses.map((e) => e.id);
@@ -277,12 +294,14 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
         toast.success("Success", {
           description: `Voucher ${res.doc_no} submitted successfully to Bulk Approval.`,
         });
+        // Re-fetch header details and refresh headers list status
+        const updatedList = await fetchHeadersList();
+        setHeadersList(updatedList);
+        await fetchData();
+        setStep(1); // Return to list view upon submission
+      } else {
+        toast.error("Submission Failed", { description: res.error || "Could not consolidate voucher" });
       }
-      // Re-fetch header details and refresh headers list status
-      const updatedList = await fetchHeadersList();
-      setHeadersList(updatedList);
-      await fetchData();
-      setStep(1); // Return to list view upon submission
     } catch (err: unknown) {
       console.error("Submission error:", err);
       const errMsg = err instanceof Error ? err.message : "Could not consolidate voucher";

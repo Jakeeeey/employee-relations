@@ -263,12 +263,15 @@ export function ExpenseLineModal({
 
           {/* Remarks */}
           <div className="space-y-1">
-            <Label className="text-xs font-semibold text-slate-500">Remarks / Particular Description</Label>
+            <Label className="text-xs font-semibold text-slate-500">Remarks / Particular Description <span className="text-rose-500">*</span></Label>
             <Textarea
-              placeholder="Provide a detailed description of the expense..."
+              placeholder="Provide a detailed description of the expense... (Required)"
               {...register("remarks")}
               className="resize-none min-h-[60px] rounded-xl border-slate-200/80 dark:border-white/10"
             />
+            {errors.remarks && (
+              <p className="text-[10px] text-rose-500 font-bold">{errors.remarks.message}</p>
+            )}
           </div>
 
           {/* File Upload Attachment */}

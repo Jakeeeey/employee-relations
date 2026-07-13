@@ -182,7 +182,7 @@ export async function submitWeeklyReport(payload: {
   supplier_id: number;
   expense_ids: number[];
   remarks?: string;
-}): Promise<{ ok: boolean; disbursement_id: number; doc_no: string }> {
+}): Promise<{ ok: boolean; disbursement_id?: number; doc_no?: string; error?: string }> {
   const res = await fetch(`${BASE_URL}?resource=submit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -190,7 +190,7 @@ export async function submitWeeklyReport(payload: {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.message || "Failed to submit weekly report");
+    return { ok: false, error: error.message || "Failed to submit weekly report" };
   }
   return res.json();
 }

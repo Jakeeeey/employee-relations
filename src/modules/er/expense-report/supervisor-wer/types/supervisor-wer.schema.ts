@@ -83,7 +83,7 @@ export const ExpenseFormInputSchema = z.object({
   amount: z.number({ message: "Amount is required" }).positive({ message: "Amount must be greater than zero" }),
   payee: z.string().min(1, { message: "Merchant name (Payee) is required" }),
   attachment_url: z.string().nullable().optional(),
-  remarks: z.string().nullable().optional(),
+  remarks: z.string({ required_error: "Remarks are required" }).min(1, { message: "Remarks are required" }),
 });
 
 export type ExpenseFormInput = z.infer<typeof ExpenseFormInputSchema>;
