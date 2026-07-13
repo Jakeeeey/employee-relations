@@ -524,6 +524,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: "Invalid submission payload" }, { status: 400 });
       }
 
+      if (!remarks || !remarks.trim()) {
+        return NextResponse.json({ message: "Submission remarks are required." }, { status: 400 });
+      }
+
       // Fetch supervisor division & department
       const divRes = await directusFetch(
         `/items/supervisor_per_division?filter[supervisor_id][_eq]=${supervisorId}&fields=division_id&limit=1`
@@ -624,6 +628,7 @@ export async function POST(request: NextRequest) {
       let disbursementId: number | null = null;
       let docNo: string | null = null;
       let approvalVersion = 1;
+      let currentStatus = "Submitted";
 
       // Check if a voucher is already linked to these expenses
       const existingPayRes = await directusFetch(
@@ -638,13 +643,14 @@ export async function POST(request: NextRequest) {
 
         if (existingDisbId) {
           const disbRes = await directusFetch(
-            `/items/disbursement_draft/${existingDisbId}?fields=id,doc_no,approval_version,total_amount`
+            `/items/disbursement_draft/${existingDisbId}?fields=id,doc_no,approval_version,total_amount,status`
           );
           const disb = disbRes.data;
           if (disb) {
             disbursementId = toNumber(disb.id);
             docNo = String(disb.doc_no || "");
             approvalVersion = toNumber(disb.approval_version, 1) + 1;
+            currentStatus = disb.status || "Submitted";
           }
         }
       }
@@ -652,18 +658,19 @@ export async function POST(request: NextRequest) {
       // Fallback: search for active pending voucher under payee supplier if all payables were detached
       if (!disbursementId) {
         const fallbackRes = await directusFetch(
-          `/items/disbursement_draft?filter[payee][_eq]=${supplierId}&filter[encoder_id][_eq]=${supervisorId}&filter[status][_in]=Drafts,Submitted,Rejected,With Concern&sort=-id&limit=1&fields=id,doc_no,approval_version,total_amount`
+          `/items/disbursement_draft?filter[payee][_eq]=${supplierId}&filter[encoder_id][_eq]=${supervisorId}&filter[status][_in]=Drafts,Submitted,Rejected,With Concern&sort=-id&limit=1&fields=id,doc_no,approval_version,total_amount,status`
         );
         const fallbackVoucher = fallbackRes.data?.[0];
         if (fallbackVoucher) {
           disbursementId = toNumber(fallbackVoucher.id);
           docNo = String(fallbackVoucher.doc_no);
           approvalVersion = toNumber(fallbackVoucher.approval_version, 1) + 1;
+          currentStatus = fallbackVoucher.status || "Submitted";
         }
       }
 
       if (disbursementId) {
-        // Update existing pending voucher
+        // Update existing pending voucher (keeps current status unchanged)
         await directusFetch(`/items/disbursement_draft/${disbursementId}`, {
           method: "PATCH",
           body: JSON.stringify({
@@ -671,7 +678,6 @@ export async function POST(request: NextRequest) {
             total_amount: totalAmount,
             remarks: remarks || "Weekly Report updated by Supervisor",
             supporting_documents_url: supportingDocs || null,
-            status: "Submitted",
             approval_version: approvalVersion,
             is_supervisor: 1,
             date_updated: nowTs,
@@ -685,8 +691,8 @@ export async function POST(request: NextRequest) {
             disbursement_id: disbursementId,
             doc_no: docNo,
             total_amount: totalAmount,
-            status: "Submitted",
-            remarks: remarks || "Supervisor resubmitted weekly report sheet.",
+            status: currentStatus,
+            remarks: remarks || "Supervisor updated weekly report sheet.",
             version: approvalVersion,
             updated_by: supervisorId,
             log_date: nowTs,
@@ -707,7 +713,7 @@ export async function POST(request: NextRequest) {
       } else {
         // Create new voucher
         const latestRes = await directusFetch(
-          `/items/disbursement_draft?filter[doc_no][_starts_with]=NT-&sort=-id&limit=1&fields=doc_no`
+          `/items/disbursement_draft?filter[doc_no][_starts_with]=NT-&sort=-doc_no&limit=1&fields=doc_no`
         );
         const latestDoc = latestRes.data?.[0]?.doc_no;
         let nextNum = 1000;
@@ -717,7 +723,20 @@ export async function POST(request: NextRequest) {
             nextNum = parseInt(match[1], 10) + 1;
           }
         }
-        docNo = `NT-${nextNum}`;
+
+        // Defensive check: ensure the doc_no is unique in disbursement_draft
+        let isUnique = false;
+        while (!isUnique) {
+          docNo = `NT-${nextNum}`;
+          const checkRes = await directusFetch(
+            `/items/disbursement_draft?filter[doc_no][_eq]=${docNo}&fields=id&limit=1`
+          );
+          if (checkRes.data && checkRes.data.length > 0) {
+            nextNum++;
+          } else {
+            isUnique = true;
+          }
+        }
 
         const createDisbRes = await directusFetch(`/items/disbursement_draft`, {
           method: "POST",
@@ -879,6 +898,7 @@ export async function PATCH(request: NextRequest) {
         }),
       });
 
+      /*
       // If the revised item was a concern, trigger recalculation of voucher link
       if (isConcern) {
         // Check if there was a pending voucher
@@ -940,6 +960,7 @@ export async function PATCH(request: NextRequest) {
           });
         }
       }
+      */
 
       return NextResponse.json({ data: patchRes.data }, { status: 200 });
     }

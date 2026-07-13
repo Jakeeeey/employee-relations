@@ -387,9 +387,9 @@ export function WeeklyReportHeader({
                 </div>
               )}
               <div className="space-y-1">
-                <Label className="text-[10px] font-bold uppercase text-slate-400">Submission Remarks</Label>
+                <Label className="text-[10px] font-bold uppercase text-slate-400">Submission Remarks <span className="text-rose-500">*</span></Label>
                 <Textarea
-                  placeholder="Add optional notes for approvers..."
+                  placeholder="Provide notes/justification for the approver... (Required)"
                   value={submitRemarks}
                   onChange={(e) => setSubmitRemarks(e.target.value)}
                   className="resize-none min-h-[50px] rounded-lg border-slate-200/80 dark:border-white/10 text-xs bg-slate-50/50 dark:bg-slate-950/20"
@@ -398,7 +398,7 @@ export function WeeklyReportHeader({
               <Button
                 className="w-full h-11 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold shadow-md cursor-pointer transition-transform transform active:scale-95 flex items-center justify-center gap-2"
                 onClick={() => onSubmit(submitRemarks)}
-                disabled={isLoading || totalExpensesCount === 0}
+                disabled={isLoading || totalExpensesCount === 0 || !submitRemarks.trim()}
               >
                 <Send className="h-4 w-4" />
                 {voucher ? "Update Submission" : "Submit to Bulk Approval"}
