@@ -47,6 +47,12 @@ async function directusFetch(path: string, options: RequestInit = {}) {
     );
   }
 
+  if (typeof data === "string" && data.trim().startsWith("<")) {
+    throw new Error(
+      `Directus API returned HTML response instead of JSON (${response.status}): ${text.slice(0, 150).replace(/\s+/g, " ")}`
+    );
+  }
+
   return data;
 }
 

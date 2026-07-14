@@ -14,6 +14,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Spinner } from "@/components/ui/spinner";
 import { Upload, X, Paperclip, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { parseJsonResponse } from "../services/supervisorWER";
 
 interface ExpenseLineModalProps {
   isOpen: boolean;
@@ -113,9 +114,9 @@ export function ExpenseLineModal({
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
-        throw new Error(data.error || "Failed to upload file");
+        throw new Error(data.error || data.message || `Failed to upload file (${res.status})`);
       }
 
       setUploadedFilename(file.name);

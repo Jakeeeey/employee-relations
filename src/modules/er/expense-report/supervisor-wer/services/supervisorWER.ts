@@ -9,16 +9,39 @@ import type {
 const BASE_URL = "/api/er/expense-report/supervisor-wer";
 
 /**
+ * Safely parses a fetch Response expecting JSON.
+ * Prevents "SyntaxError: Unexpected token '<', '<!DOCTYPE ...' is not valid JSON"
+ * when receiving HTML error pages or redirects.
+ */
+export async function parseJsonResponse<T = any>(res: Response): Promise<T> {
+  const text = await res.text();
+  if (!text || !text.trim()) {
+    return {} as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    if (!res.ok || text.trim().startsWith("<")) {
+      const excerpt = text.slice(0, 150).replace(/\s+/g, " ");
+      throw new Error(
+        `Server returned ${res.status} ${res.statusText} (${text.trim().startsWith("<") ? "HTML response" : "non-JSON"}): ${excerpt}`
+      );
+    }
+    throw err;
+  }
+}
+
+/**
  * Fetches the list of active suppliers from Directus.
  * @returns {Promise<Supplier[]>} A promise resolving to the list of suppliers.
  */
 export async function fetchSuppliersList(): Promise<Supplier[]> {
   const res = await fetch(`${BASE_URL}?resource=suppliers`);
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to fetch suppliers list");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to fetch suppliers list (${res.status})`);
   }
-  const data = await res.json();
+  const data = await parseJsonResponse(res);
   return (data.data || []) as Supplier[];
 }
 
@@ -29,10 +52,10 @@ export async function fetchSuppliersList(): Promise<Supplier[]> {
 export async function fetchHeadersList(): Promise<ExpenseDraftHeader[]> {
   const res = await fetch(`${BASE_URL}?resource=headers-list`);
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to fetch headers list");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to fetch headers list (${res.status})`);
   }
-  const data = await res.json();
+  const data = await parseJsonResponse(res);
   return (data.data || []) as ExpenseDraftHeader[];
 }
 
@@ -57,10 +80,10 @@ export async function createHeader(payload: {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to create weekly report header");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to create weekly report header (${res.status})`);
   }
-  const data = await res.json();
+  const data = await parseJsonResponse(res);
   return data.data as ExpenseDraftHeader;
 }
 
@@ -76,10 +99,10 @@ export async function fetchWeeklyHeader(
     `${BASE_URL}?resource=header&header_id=${headerId}`
   );
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to fetch weekly header details");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to fetch weekly header details (${res.status})`);
   }
-  return res.json();
+  return parseJsonResponse(res);
 }
 
 /**
@@ -90,10 +113,10 @@ export async function fetchWeeklyHeader(
 export async function fetchExpenses(headerId: number): Promise<ExpenseDraft[]> {
   const res = await fetch(`${BASE_URL}?resource=expenses&header_id=${headerId}`);
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to fetch weekly expenses");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to fetch weekly expenses (${res.status})`);
   }
-  const data = await res.json();
+  const data = await parseJsonResponse(res);
   return (data.data || []) as ExpenseDraft[];
 }
 
@@ -105,10 +128,10 @@ export async function fetchExpenses(headerId: number): Promise<ExpenseDraft[]> {
 export async function fetchReturnedExpenses(supplierId: number): Promise<ExpenseDraft[]> {
   const res = await fetch(`${BASE_URL}?resource=returned-expenses&supplier_id=${supplierId}`);
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to fetch returned expenses");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to fetch returned expenses (${res.status})`);
   }
-  const data = await res.json();
+  const data = await parseJsonResponse(res);
   return (data.data || []) as ExpenseDraft[];
 }
 
@@ -119,10 +142,10 @@ export async function fetchReturnedExpenses(supplierId: number): Promise<Expense
 export async function fetchChartOfAccounts(): Promise<COA[]> {
   const res = await fetch(`${BASE_URL}?resource=coa`);
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to fetch Chart of Accounts");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to fetch Chart of Accounts (${res.status})`);
   }
-  const data = await res.json();
+  const data = await parseJsonResponse(res);
   return (data.data || []) as COA[];
 }
 
@@ -145,10 +168,10 @@ export async function createOrUpdateExpense(
   });
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to save expense line item");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to save expense line item (${res.status})`);
   }
-  const data = await res.json();
+  const data = await parseJsonResponse(res);
   return data.data as ExpenseDraft;
 }
 
@@ -162,8 +185,8 @@ export async function deleteExpense(id: number): Promise<boolean> {
     method: "DELETE",
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Failed to delete expense line item");
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to delete expense line item (${res.status})`);
   }
   return true;
 }
@@ -189,8 +212,12 @@ export async function submitWeeklyReport(payload: {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const error = await res.json();
-    return { ok: false, error: error.message || "Failed to submit weekly report" };
+    try {
+      const error = await parseJsonResponse(res);
+      return { ok: false, error: error.message || error.error || `Failed to submit weekly report (${res.status})` };
+    } catch (err: any) {
+      return { ok: false, error: err.message || `Failed to submit weekly report (${res.status})` };
+    }
   }
-  return res.json();
+  return parseJsonResponse(res);
 }

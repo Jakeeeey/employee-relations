@@ -7,6 +7,23 @@ const FOLDER_NAME = "expense_draft";
 
 export const runtime = "nodejs";
 
+async function parseDirectusJson(response: Response, label: string) {
+  const text = await response.text();
+  let data: any;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = text;
+  }
+  if (!response.ok) {
+    throw new Error(`${label} failed: ${response.status} - ${typeof data === "object" ? JSON.stringify(data) : text}`);
+  }
+  if (typeof data === "string" && data.trim().startsWith("<")) {
+    throw new Error(`${label} returned HTML response instead of JSON.`);
+  }
+  return data;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -44,12 +61,7 @@ export async function POST(req: NextRequest) {
       body: directusForm,
     });
 
-    if (!uploadRes.ok) {
-      const errText = await uploadRes.text();
-      throw new Error(`Directus upload failed: ${uploadRes.status} - ${errText}`);
-    }
-
-    const uploadData = await uploadRes.json();
+    const uploadData = await parseDirectusJson(uploadRes, "Directus upload");
     const fileId = uploadData.data?.id;
 
     // 2. Try to move file to the correct folder
@@ -60,7 +72,7 @@ export async function POST(req: NextRequest) {
           { headers: { Authorization: `Bearer ${staticToken}` } }
         );
         if (folderRes.ok) {
-          const folderData = await folderRes.json();
+          const folderData = await parseDirectusJson(folderRes, "Folder lookup");
           let folderId =
             folderData.data && folderData.data.length > 0
               ? folderData.data[0].id
@@ -77,7 +89,7 @@ export async function POST(req: NextRequest) {
               body: JSON.stringify({ name: FOLDER_NAME }),
             });
             if (createFolderRes.ok) {
-              const createFolderData = await createFolderRes.json();
+              const createFolderData = await parseDirectusJson(createFolderRes, "Folder creation");
               folderId = createFolderData.data?.id;
             }
           }
