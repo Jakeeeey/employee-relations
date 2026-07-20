@@ -47,6 +47,12 @@ async function directusFetch(path: string, options: RequestInit = {}) {
     );
   }
 
+  if (typeof data === "string" && data.trim().startsWith("<")) {
+    throw new Error(
+      `Directus API returned HTML response instead of JSON (${response.status}): ${text.slice(0, 150).replace(/\s+/g, " ")}`
+    );
+  }
+
   return data;
 }
 
@@ -449,6 +455,17 @@ export async function POST(request: NextRequest) {
         `/items/supervisor_per_division?filter[supervisor_id][_eq]=${supervisorId}&fields=division_id&limit=1`
       );
       const divisionId = divRes.data?.[0]?.division_id ? toNumber(divRes.data[0].division_id) : 1; // default fallback if null
+
+      // Check if header with same user, supplier, and period already exists
+      const existingHeaderRes = await directusFetch(
+        `/items/expense_draft_header?filter[created_by][_eq]=${supervisorId}&filter[payee_id][_eq]=${supplierIdNum}&filter[period_from][_eq]=${from}&filter[period_to][_eq]=${to}&limit=1`
+      );
+      if (existingHeaderRes.data && existingHeaderRes.data.length > 0) {
+        return NextResponse.json(
+          { message: "A weekly report header already exists for this supplier payee and weekly period." },
+          { status: 400 }
+        );
+      }
 
       // Create new header
       const createRes = await directusFetch(`/items/expense_draft_header`, {

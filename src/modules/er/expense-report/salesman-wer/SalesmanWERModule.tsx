@@ -1,30 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSupervisorWER } from "./hooks/useSupervisorWER";
+import { useSalesmanWER } from "./hooks/useSalesmanWER";
 import { WeeklyReportHeader } from "./components/WeeklyReportHeader";
 import { ExpenseLinesTable } from "./components/ExpenseLinesTable";
 import { ExpenseLineModal } from "./components/ExpenseLineModal";
-import type { ExpenseDraft } from "./types/supervisor-wer.schema";
+import type { ExpenseDraft } from "./types/salesman-wer.schema";
 import { Spinner } from "@/components/ui/spinner";
 import { AlertCircle, Settings, ClipboardList, CheckCircle2, ChevronRight, Bell, CheckCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useNotificationStore } from "../salesman-wer/store/notificationStore";
+import { useNotificationStore } from "./store/notificationStore";
 import {
   getActionRequiredNotifications,
   getMarkableNotificationIds,
+  getVisibleNotifications,
   isNotificationHighlighted,
   isPersistentActionNotification,
   sortWerNotificationsByPriority,
-} from "../salesman-wer/notifications";
+  type SalesmanWerNotification,
+} from "./notifications";
 
-interface SupervisorWERModuleProps {
+interface SalesmanWERModuleProps {
   userId: number;
 }
 
-export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps) {
+export default function SalesmanWERModule({ userId }: SalesmanWERModuleProps) {
   const {
     suppliers,
     headersList,
@@ -34,6 +36,8 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
     voucher,
     expenses,
     returnedExpenses,
+    attachments,
+    attachmentQuerySuccess,
     coaList,
     isLoading,
     error,
@@ -42,8 +46,9 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
     handleCreateHeader,
     handleSaveExpense,
     handleDeleteExpense,
-    handleSubmitWeekly,
-  } = useSupervisorWER(userId);
+    handleUploadWER,
+    handleDeleteWER,
+  } = useSalesmanWER(userId);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ExpenseDraft | null>(null);
@@ -64,10 +69,11 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
 
   const { seenIds, markAsSeen, markAllAsSeen } = useNotificationStore();
 
-  const prioritizedExpenses = sortWerNotificationsByPriority(returnedExpenses);
-  const actionRequiredExpenses = getActionRequiredNotifications(prioritizedExpenses, seenIds);
-  const actionRequiredCount = actionRequiredExpenses.length;
-  const markableNotificationIds = getMarkableNotificationIds(prioritizedExpenses, seenIds);
+  const isLocked = !!voucher && (
+    ["submitted", "approved", "paid"].includes(voucher.status.toLowerCase()) ||
+    voucher.status.toLowerCase().startsWith("pending_") ||
+    (voucher.status.toLowerCase() === "rejected" && expenses.length <= 1)
+  ) || expenses.some((expense) => expense.status === "Approved");
 
   const supplierId = header
     ? (typeof header.payee_id === "object" && header.payee_id !== null ? header.payee_id.id : header.payee_id)
@@ -77,22 +83,31 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
   const defaultPayeeName = currentSupplier?.supplier_name || 
     (header && typeof header.payee_id === "object" && header.payee_id !== null ? header.payee_id.supplier_name : "");
 
+  const allNotifications = sortWerNotificationsByPriority(
+    getVisibleNotifications([], returnedExpenses)
+  );
+  const actionRequiredNotifications = getActionRequiredNotifications(allNotifications, seenIds);
+  const actionRequiredCount = actionRequiredNotifications.length;
+  const markableNotificationIds = getMarkableNotificationIds(allNotifications, seenIds);
+
   useEffect(() => {
     if (isLoading) return;
 
-    // Auto-popup With Concern items on refresh/load
+    // 1. Auto-popup With Concern items on refresh/load
     const withConcernItem = returnedExpenses.find((e) => e.status === "With Concern");
     if (withConcernItem) {
       setSelectedHeaderId(withConcernItem.header_id);
       setStep(2);
-      // Wait slightly for step transition to complete
       const timer = setTimeout(() => {
         setEditingItem(withConcernItem);
         setIsModalOpen(true);
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [isLoading, returnedExpenses, isModalOpen, editingItem, setSelectedHeaderId, setStep]);
+
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
@@ -100,16 +115,16 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-slate-200/50 dark:border-white/5 pb-5">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase italic">
-            Supervisor Weekly Expense Reports
+            Salesman Weekly Expense Reports
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Compile, review, and authorize weekly supplier expense sheets directly to the Bulk Approval queue.
+            Compile, review, and maintain weekly supplier expense sheets until approval locks the report.
           </p>
         </div>
 
         {/* Wizard Steps Indicator & Notifications */}
         <div className="flex items-center gap-3">
-          {prioritizedExpenses.length > 0 && (
+          {allNotifications.length > 0 && (
             <Popover>
               <PopoverTrigger asChild>
                 <button className="relative p-2.5 rounded-2xl bg-rose-50/50 dark:bg-rose-950/10 hover:bg-rose-100/50 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-455 border border-rose-200/40 dark:border-rose-900/20 transition-all cursor-pointer transform active:scale-95 flex items-center justify-center">
@@ -138,7 +153,7 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
                   )}
                 </div>
                 <div className="max-h-[26rem] overflow-y-auto divide-y divide-slate-100 dark:divide-white/5 pb-2 scrollbar-thin">
-                  {prioritizedExpenses.map((item) => {
+                  {allNotifications.map((item: SalesmanWerNotification) => {
                     const isHighlighted = isNotificationHighlighted(item, seenIds);
                     return (
                       <div
@@ -166,7 +181,7 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
                         <div className="flex items-center gap-1.5 flex-wrap pr-4">
                           <span className={cn(
                             "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
-                            item.status === "Rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-450" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
+                            item.status === "Rejected" ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400" : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
                           )}>
                             {item.status}
                           </span>
@@ -174,7 +189,7 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
                           <span className="font-bold truncate max-w-[120px]">Payee: {item.payee}</span>
                         </div>
                         {item.feedback && (
-                          <p className="text-[10px] text-rose-600 dark:text-rose-455 italic bg-rose-50/50 dark:bg-rose-950/10 p-2 rounded border border-rose-500/5 leading-relaxed">
+                          <p className="text-[10px] text-rose-600 dark:text-rose-450 italic bg-rose-50/50 dark:bg-rose-950/10 p-2 rounded border border-rose-500/5 leading-relaxed">
                             &ldquo;{item.feedback}&rdquo;
                           </p>
                         )}
@@ -200,14 +215,14 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer",
                 step === 1
                   ? "bg-cyan-600 text-white shadow-sm"
-                  : "text-slate-505 hover:text-slate-800 dark:hover:text-slate-200"
+                  : "text-slate-500 hover:text-slate-855 dark:hover:text-slate-250"
               )}
             >
               <Settings className="h-3.5 w-3.5" />
               <span>1. Header Config</span>
               {selectedHeaderId && <CheckCircle2 className="h-3 w-3 text-cyan-200" />}
             </div>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-350" />
+            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
             <div
               onClick={() => selectedHeaderId && setStep(2)}
               className={cn(
@@ -215,7 +230,7 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
                 step === 2
                   ? "bg-cyan-600 text-white shadow-sm"
                   : selectedHeaderId
-                  ? "text-slate-505 hover:text-slate-850 dark:hover:text-slate-200 cursor-pointer"
+                  ? "text-slate-500 hover:text-slate-855 dark:hover:text-slate-250 cursor-pointer"
                   : "text-slate-300 dark:text-white/10 cursor-not-allowed"
               )}
             >
@@ -239,7 +254,7 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
           <AlertCircle className="h-5 w-5" />
           <AlertTitle className="font-bold">Account Configuration Required</AlertTitle>
           <AlertDescription className="text-xs font-semibold">
-            Your supervisor account is not assigned to any supplier payee. Please contact an administrator to get assigned to a supplier in the suppliers directory.
+            Your salesman account is not assigned to any supplier payee. Please contact an administrator to get assigned to a supplier in the suppliers directory.
           </AlertDescription>
         </Alert>
       )}
@@ -253,12 +268,16 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
         onCreateHeader={handleCreateHeader}
         header={header}
         voucher={voucher}
-        onSubmit={handleSubmitWeekly}
+        attachments={attachments}
+        attachmentQuerySuccess={attachmentQuerySuccess}
+        onUploadWER={handleUploadWER}
+        onDeleteWER={handleDeleteWER}
         isLoading={isLoading}
         totalExpensesCount={expenses.length}
         totalExpensesAmount={totalAmount}
         step={step}
         setStep={setStep}
+        isReportFinalized={isLocked}
       />
 
       {/* Conditional steps view rendering */}
@@ -272,13 +291,14 @@ export default function SupervisorWERModule({ userId }: SupervisorWERModuleProps
               </div>
             )}
 
-            <ExpenseLinesTable
+             <ExpenseLinesTable
               expenses={expenses}
               voucher={voucher}
               onEdit={openEditModal}
               onDelete={handleDeleteExpense}
               onAddClick={openAddModal}
               isLoading={isLoading}
+              isLocked={isLocked}
             />
           </div>
         </div>
