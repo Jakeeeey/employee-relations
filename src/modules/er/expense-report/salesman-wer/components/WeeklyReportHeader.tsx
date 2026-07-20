@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import type { Supplier, ExpenseDraftHeader, DisbursementDraft } from "../types/supervisor-wer.schema";
+import type { Supplier, ExpenseDraftHeader, DisbursementDraft, ExpenseAttachment } from "../types/salesman-wer.schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Send, Store, Plus, Check, ArrowLeft, ArrowRight, ClipboardList, Info, AlertTriangle, User } from "lucide-react";
+import { Calendar, Store, Plus, Check, ArrowLeft, ArrowRight, ClipboardList, Info, Paperclip, Trash, AlertTriangle, Upload, User } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { StatusTone } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
+import { ImagePreviewModal } from "./ImagePreviewModal";
 import { resolveRegisteredSupplier } from "../../shared/registeredSupplier";
 
 interface WeeklyReportHeaderProps {
@@ -26,12 +27,16 @@ interface WeeklyReportHeaderProps {
   }) => Promise<unknown>;
   header: ExpenseDraftHeader | null;
   voucher: DisbursementDraft | null;
-  onSubmit: (remarks?: string) => Promise<void>;
+  attachments: ExpenseAttachment[];
+  attachmentQuerySuccess: boolean;
+  onUploadWER: (file: File) => Promise<void>;
+  onDeleteWER: (id: number) => Promise<void>;
   isLoading: boolean;
   totalExpensesCount: number;
   totalExpensesAmount: number;
   step: number;
   setStep: (step: number) => void;
+  isReportFinalized?: boolean;
 }
 
 export function WeeklyReportHeader({
@@ -42,26 +47,35 @@ export function WeeklyReportHeader({
   onCreateHeader,
   header,
   voucher,
-  onSubmit,
+  attachments,
+  attachmentQuerySuccess,
+  onUploadWER,
+  onDeleteWER,
   isLoading,
   totalExpensesCount,
   totalExpensesAmount,
   step,
   setStep,
+  isReportFinalized = false,
 }: WeeklyReportHeaderProps) {
   const [newFromDate, setNewFromDate] = useState("");
   const [newToDate, setNewToDate] = useState("");
   const [newRemarks, setNewRemarks] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-
-  const [submitRemarks, setSubmitRemarks] = useState("");
+  const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
   const { supplier: registeredSupplier, hasMultipleAssignments } =
     resolveRegisteredSupplier(suppliers);
 
-  const isLocked = !!voucher && (
-    ["Submitted", "Approved", "Paid"].includes(voucher.status) ||
-    (voucher.status === "Rejected" && totalExpensesCount <= 1)
-  );
+  const isHeaderLocked = isReportFinalized || (!!header && (
+    ["submitted", "waiting for approval", "waiting_for_approval", "approved", "paid"].includes((header.status || "").toLowerCase()) ||
+    (header.status || "").toLowerCase().startsWith("pending_")
+  ));
+
+  const isLocked = isHeaderLocked || (!!voucher && (
+    ["submitted", "approved", "paid"].includes(voucher.status.toLowerCase()) ||
+    voucher.status.toLowerCase().startsWith("pending_") ||
+    (voucher.status.toLowerCase() === "rejected" && totalExpensesCount <= 1)
+  ));
 
   const handleCreate = async () => {
     if (!registeredSupplier || !newFromDate || !newToDate) return;
@@ -88,7 +102,7 @@ export function WeeklyReportHeader({
     if (!status) return "neutral";
     const s = status.toLowerCase();
     if (s === "approved" || s === "paid") return "success";
-    if (s === "submitted" || s === "pending") return "info";
+    if (s === "submitted" || s === "pending" || s.startsWith("pending_") || s === "waiting for approval") return "info";
     if (s === "rejected") return "destructive";
     return "warning";
   };
@@ -154,7 +168,11 @@ export function WeeklyReportHeader({
                         </span>
                       </div>
                       {(() => {
-                        const displayStatus = h.voucher_status ?? h.status ?? "Drafts";
+                        const rawStatus = h.voucher_status ?? h.status ?? "Drafts";
+                        let displayStatus = rawStatus;
+                        if (rawStatus.toLowerCase() === "pending_l2" || rawStatus.toLowerCase().startsWith("pending_l")) {
+                          displayStatus = "Waiting for Approval";
+                        }
                         const tone = h.voucher_status
                           ? getVoucherStatusTone(h.voucher_status)
                           : getHeaderStatusTone(h.status ?? "Drafts");
@@ -299,7 +317,7 @@ export function WeeklyReportHeader({
     );
   }
 
-  // Render Step 2 View: Header Summary and Submissions Form
+  // Render Step 2 View: Header Summary and WER file management
   const payeeName = header && typeof header.payee_id === "object" && header.payee_id !== null
     ? header.payee_id.supplier_name
     : `Supplier ID: ${header?.payee_id}`;
@@ -341,31 +359,124 @@ export function WeeklyReportHeader({
             {header?.remarks && (
               <div className="col-span-1 md:col-span-2 pt-3 border-t border-dashed border-slate-200/50 dark:border-white/5 space-y-0.5">
                 <span className="font-bold block uppercase tracking-wider text-[9px] text-slate-400">Header Remarks</span>
-                <p className="text-slate-650 dark:text-slate-350 italic">&ldquo;{header.remarks}&rdquo;</p>
+                <p className="text-slate-655 dark:text-slate-355 italic">&ldquo;{header.remarks}&rdquo;</p>
+              </div>
+            )}
+          </div>
+
+          {/* WER Summary Attachments Section */}
+          <div className="pt-4 border-t border-slate-200/50 dark:border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold uppercase tracking-wider text-[10px] text-slate-400 flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5" />
+                WER Summary Files
+              </span>
+              {!isLocked && (
+                <div className="relative">
+                  <Input
+                    type="file"
+                    id="wer-file-upload"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) onUploadWER(file);
+                    }}
+                    disabled={isLoading}
+                  />
+                  <Label
+                    htmlFor="wer-file-upload"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-cyan-50/50 dark:bg-cyan-950/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500 hover:text-white dark:hover:bg-cyan-500 cursor-pointer transition-all active:scale-95"
+                  >
+                    <Upload className="h-3 w-3" />
+                    Upload Summary
+                  </Label>
+                </div>
+              )}
+            </div>
+
+            {/* Warn if query failed */}
+            {!attachmentQuerySuccess && (
+              <div className="flex items-center gap-2 p-3 text-xs bg-amber-500/5 border border-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 animate-pulse">
+                <AlertTriangle className="h-4.5 w-4.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Query Failure</p>
+                  <p className="text-[10px] opacity-90">Failed to load attachments from the server database.</p>
+                </div>
+              </div>
+            )}
+
+
+            {/* Render file attachments list */}
+            {attachments.length > 0 && (
+              <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto pr-1">
+                {attachments.map((file) => {
+                  const assetUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ""}/assets/${file.file_url}`;
+                  return (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between p-2 rounded-xl border border-slate-200/60 dark:border-white/5 bg-slate-50/30 dark:bg-slate-950/10 text-xs text-slate-700 dark:text-slate-350"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Paperclip className="h-3.5 w-3.5 text-cyan-600/70 shrink-0" />
+                        <button
+                          type="button"
+                          onClick={() => setPreviewFile({ url: assetUrl, name: file.file_name })}
+                          className="font-medium truncate hover:text-cyan-600 dark:hover:text-cyan-400 hover:underline cursor-pointer text-left"
+                        >
+                          {file.file_name}
+                        </button>
+                        {file.file_size !== undefined && file.file_size !== null && (
+                          <span className="text-[9px] text-slate-400 shrink-0">
+                            ({(file.file_size / 1024).toFixed(1)} KB)
+                          </span>
+                        )}
+                      </div>
+                      {!isLocked && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDeleteWER(file.id)}
+                          className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-500/5 rounded-lg"
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Voucher Status Section */}
+      {/* Report Status Section */}
       <Card className="border-slate-200/80 dark:border-white/10 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.06)] dark:shadow-none bg-gradient-to-br from-white/70 to-slate-50/30 dark:from-slate-900/50 dark:to-slate-950/10 backdrop-blur-md flex flex-col justify-between">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold tracking-wider uppercase text-slate-400">Consolidated Voucher</span>
+            <span className="text-xs font-bold tracking-wider uppercase text-slate-400">Report Status</span>
             {voucher ? (
               <StatusBadge tone={getVoucherStatusTone(voucher.status)}>
-                {voucher.status}
+                {voucher.status.toLowerCase() === "pending_l2" || voucher.status.toLowerCase().startsWith("pending_l")
+                  ? "Waiting for Approval"
+                  : voucher.status}
               </StatusBadge>
+            ) : isLocked ? (
+              <StatusBadge tone="info">Locked</StatusBadge>
             ) : (
-              <StatusBadge tone="neutral">Not Submitted</StatusBadge>
+              <StatusBadge tone="neutral">Editable</StatusBadge>
             )}
           </div>
           <CardTitle className="text-xl font-black mt-2 tracking-tight">
-            {voucher ? voucher.doc_no : "NT-PENDING"}
+            {voucher ? voucher.doc_no : "Weekly Report Draft"}
           </CardTitle>
           <CardDescription>
-            {voucher ? "Voucher in Bulk Approval progress" : "Draft weekly sheet ready for submission"}
+            {voucher
+              ? "Voucher in Bulk Approval progress"
+              : isLocked
+                ? "External approval state has locked this report"
+                : "Salesman can continue updating lines and WER files"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 flex-1 flex flex-col justify-end pt-4">
@@ -382,55 +493,45 @@ export function WeeklyReportHeader({
             </div>
           </div>
 
-          {header && !isLocked ? (
-            <div className="space-y-3 pt-2">
-              {voucher && ["Rejected", "With Concern"].includes(voucher.status) && (
-                <div className="bg-rose-50/50 dark:bg-rose-950/10 border border-rose-200/50 dark:border-rose-950/30 p-3 rounded-lg text-xs space-y-1 mb-2">
-                  <span className="font-bold text-rose-800 dark:text-rose-400 block uppercase tracking-wider text-[9px]">Voucher Concern Feedback:</span>
-                  <p className="text-slate-700 dark:text-slate-300 italic">&ldquo;{voucher.remarks || "No comments provided by treasury."}&rdquo;</p>
-                </div>
-              )}
-              <div className="space-y-1">
-                <Label className="text-[10px] font-bold uppercase text-slate-400">Submission Remarks <span className="text-rose-500">*</span></Label>
-                <Textarea
-                  placeholder="Provide notes/justification for the approver... (Required)"
-                  value={submitRemarks}
-                  onChange={(e) => setSubmitRemarks(e.target.value)}
-                  className="resize-none min-h-[50px] rounded-lg border-slate-200/80 dark:border-white/10 text-xs bg-slate-50/50 dark:bg-slate-950/20"
-                />
-              </div>
-              <Button
-                className="w-full h-11 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold shadow-md cursor-pointer transition-transform transform active:scale-95 flex items-center justify-center gap-2"
-                onClick={() => onSubmit(submitRemarks)}
-                disabled={isLoading || totalExpensesCount === 0 || !submitRemarks.trim()}
-              >
-                <Send className="h-4 w-4" />
-                {voucher ? "Update Submission" : "Submit to Bulk Approval"}
-              </Button>
-            </div>
-          ) : header && isLocked ? (
+          {header && isLocked ? (
             <div className="space-y-3 pt-2">
               {voucher && voucher.status === "Rejected" && (
                 <div className="bg-rose-50/50 dark:bg-rose-950/10 border border-rose-200/50 dark:border-rose-950/30 p-3 rounded-lg text-xs space-y-1 mb-2">
-                  <span className="font-bold text-rose-800 dark:text-rose-400 block uppercase tracking-wider text-[9px]">Rejection Feedback:</span>
-                  <p className="text-slate-700 dark:text-slate-300 italic">&ldquo;{voucher.remarks || "No comments provided by treasury."}&rdquo;</p>
+                  <span className="font-bold text-rose-800 dark:text-rose-455 block uppercase tracking-wider text-[9px]">Rejection Feedback:</span>
+                  <p className="text-slate-700 dark:text-slate-355 italic">&ldquo;{voucher.remarks || "No comments provided by treasury."}&rdquo;</p>
                 </div>
               )}
               <div className="pt-2 text-xs text-slate-500 dark:text-slate-400 flex items-start gap-2 bg-slate-100/50 dark:bg-white/[0.02] p-3 rounded-lg border border-slate-200/50 dark:border-white/5">
                 <Info className="h-4 w-4 text-cyan-500 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-slate-800 dark:text-slate-200">Weekly Sheet Locked</p>
-                  <p className="mt-0.5">This period is consolidated and locked (voucher status: {voucher.status}). Line modifications are disabled.</p>
+                  <p className="mt-0.5">This period is locked by an external approval or voucher state. Line modifications are disabled.</p>
                 </div>
+              </div>
+            </div>
+          ) : header ? (
+            <div className="pt-2 text-xs text-slate-555 dark:text-slate-400 flex items-start gap-2 bg-cyan-50/50 dark:bg-cyan-950/10 p-3 rounded-lg border border-cyan-200/60 dark:border-cyan-950/40">
+              <Info className="h-4 w-4 text-cyan-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">Salesman Editing Open</p>
+                <p className="mt-0.5">No Salesman-side final submission is required. Continue updating expense lines and WER Summary files until another module approves or locks this report.</p>
               </div>
             </div>
           ) : (
             <div className="pt-2 text-xs text-slate-550 italic flex items-center justify-center p-3 border border-dashed border-slate-200/80 dark:border-white/10 rounded-xl">
-              Select/create header in Step 1 to submit
+              Select/create header in Step 1 to manage WER files and lines.
             </div>
           )}
         </CardContent>
       </Card>
+
+      {previewFile && (
+        <ImagePreviewModal
+          src={previewFile.url}
+          fileName={previewFile.name}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
     </div>
   );
 }

@@ -456,6 +456,17 @@ export async function POST(request: NextRequest) {
       );
       const divisionId = divRes.data?.[0]?.division_id ? toNumber(divRes.data[0].division_id) : 1; // default fallback if null
 
+      // Check if header with same user, supplier, and period already exists
+      const existingHeaderRes = await directusFetch(
+        `/items/expense_draft_header?filter[created_by][_eq]=${supervisorId}&filter[payee_id][_eq]=${supplierIdNum}&filter[period_from][_eq]=${from}&filter[period_to][_eq]=${to}&limit=1`
+      );
+      if (existingHeaderRes.data && existingHeaderRes.data.length > 0) {
+        return NextResponse.json(
+          { message: "A weekly report header already exists for this supplier payee and weekly period." },
+          { status: 400 }
+        );
+      }
+
       // Create new header
       const createRes = await directusFetch(`/items/expense_draft_header`, {
         method: "POST",

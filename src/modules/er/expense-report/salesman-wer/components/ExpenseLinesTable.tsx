@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ExpenseDraft, DisbursementDraft } from "../types/supervisor-wer.schema";
+import type { ExpenseDraft, DisbursementDraft } from "../types/salesman-wer.schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ interface ExpenseLinesTableProps {
   onDelete: (id: number) => void;
   onAddClick: () => void;
   isLoading: boolean;
+  isLocked?: boolean;
 }
 
 export function ExpenseLinesTable({
@@ -33,12 +34,16 @@ export function ExpenseLinesTable({
   onDelete,
   onAddClick,
   isLoading,
+  isLocked: propIsLocked,
 }: ExpenseLinesTableProps) {
 
-  const isLocked = !!voucher && (
-    ["Submitted", "Approved", "Paid"].includes(voucher.status) ||
-    (voucher.status === "Rejected" && expenses.length <= 1)
+  const internalIsLocked = !!voucher && (
+    ["submitted", "approved", "paid"].includes(voucher.status.toLowerCase()) ||
+    voucher.status.toLowerCase().startsWith("pending_") ||
+    (voucher.status.toLowerCase() === "rejected" && expenses.length <= 1)
   );
+
+  const isLocked = propIsLocked !== undefined ? propIsLocked : internalIsLocked;
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -101,7 +106,7 @@ export function ExpenseLinesTable({
                     <TableCell className="font-medium text-xs text-slate-800 dark:text-slate-200 whitespace-nowrap">
                       {expense.transaction_date}
                     </TableCell>
-                    <TableCell className="text-xs font-semibold text-slate-700 dark:text-slate-355">
+                    <TableCell className="text-xs font-semibold text-slate-700 dark:text-slate-350">
                       <div>{expense.payee || "N/A"}</div>
                       {expense.status && ["With Concern", "Rejected"].includes(expense.status) && (
                         <div className="mt-1 flex items-center gap-1.5">
