@@ -773,8 +773,6 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ message: "Resource not found" }, { status: 404 });
-
-    return NextResponse.json({ message: "Resource not found" }, { status: 404 });
   } catch (error: unknown) {
     console.error("POST API error:", error);
     const errMsg = error instanceof Error ? error.message : "Internal server error";
