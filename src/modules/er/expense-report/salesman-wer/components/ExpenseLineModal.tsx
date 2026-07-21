@@ -249,7 +249,7 @@ export function ExpenseLineModal({
 
           {/* Amount */}
           <div className="min-w-0 space-y-1">
-            <Label className="text-xs font-semibold text-slate-500">Amount (PHP)</Label>
+            <Label className="text-xs font-semibold text-slate-500">Amount (PHP) <span className="text-rose-500">*</span></Label>
             <Input
               type="number"
               step="0.01"
@@ -277,7 +277,7 @@ export function ExpenseLineModal({
 
           {/* File Upload Attachment */}
           <div className="min-w-0 space-y-2">
-            <Label className="text-xs font-semibold text-slate-500">Receipt Attachment</Label>
+            <Label className="text-xs font-semibold text-slate-500">Receipt Attachment <span className="text-rose-500">*</span></Label>
             {attachmentUrl ? (
               <div className="flex items-center justify-between p-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 text-xs text-cyan-700 dark:text-cyan-400">
                 <div className="flex items-center gap-2 truncate">
@@ -318,6 +318,9 @@ export function ExpenseLineModal({
                   </div>
                 )}
               </div>
+            )}
+            {errors.attachment_url && (
+              <p className="text-[10px] text-rose-500 font-bold">{errors.attachment_url.message}</p>
             )}
           </div>
 

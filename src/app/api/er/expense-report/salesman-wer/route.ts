@@ -534,13 +534,13 @@ export async function POST(request: NextRequest) {
       );
       const divisionId = divRes.data?.[0]?.division_id ? toNumber(divRes.data[0].division_id) : 1; // default fallback if null
 
-      // Check if header with same salesman, division, and period already exists
+      // Check if header with same salesman, division, and period already exists and is not rejected
       const existingHeaderRes = await directusFetch(
-        `/items/expense_draft_header?filter[created_by][_eq]=${salesmanId}&filter[division_id][_eq]=${divisionId}&filter[period_from][_eq]=${from}&filter[period_to][_eq]=${to}&limit=1`
+        `/items/expense_draft_header?filter[created_by][_eq]=${salesmanId}&filter[division_id][_eq]=${divisionId}&filter[period_from][_eq]=${from}&filter[period_to][_eq]=${to}&filter[status][_neq]=Rejected&limit=1`
       );
       if (existingHeaderRes.data && existingHeaderRes.data.length > 0) {
         return NextResponse.json(
-          { message: "A weekly report header already exists for this salesman, division, and weekly period." },
+          { message: "An active weekly report header already exists for this salesman, division, and weekly period." },
           { status: 409 }
         );
       }
@@ -831,7 +831,7 @@ export async function PATCH(request: NextRequest) {
           }
 
 
-          if (header.status && header.status !== "Drafts") {
+          if (header.status && header.status !== "Drafts" && header.status !== "With Concern" && original.status !== "With Concern") {
             return NextResponse.json({ message: `This weekly report header is locked (status: ${header.status}) and cannot receive edits.` }, { status: 400 });
           }
 
@@ -842,7 +842,7 @@ export async function PATCH(request: NextRequest) {
             disbStatus.toLowerCase().startsWith("pending_") ||
             (disbStatus === "Rejected" && disbLinesCount <= 1)
           );
-          if (isLocked) {
+          if (isLocked && original.status !== "With Concern") {
             return NextResponse.json({ message: `This weekly report is locked (voucher status: ${disbStatus}) and cannot receive edits.` }, { status: 400 });
           }
           
