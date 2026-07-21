@@ -83,7 +83,7 @@ export const ExpenseFormInputSchema = z.object({
   transaction_date: z.string().min(1, { message: "Transaction date is required" }),
   amount: z.number({ message: "Amount is required" }).refine((val) => val !== 0, { message: "Amount cannot be zero" }),
   payee: z.string().min(1, { message: "Merchant name (Payee) is required" }),
-  attachment_url: z.string({ required_error: "Receipt attachment is required" }).min(1, { message: "Receipt attachment is required" }),
+  attachment_url: z.string({ message: "Receipt attachment is required" }).min(1, { message: "Receipt attachment is required" }),
   remarks: z.string({ message: "Remarks are required" }).min(1, { message: "Remarks are required" }),
 });
 
