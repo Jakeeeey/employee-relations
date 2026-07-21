@@ -4,9 +4,10 @@ import type {
   ExpenseDraftHeader,
   COA,
   DisbursementDraft,
-} from "../types/supervisor-wer.schema";
+  ExpenseAttachment,
+} from "../types/salesman-wer.schema";
 
-const BASE_URL = "/api/er/expense-report/supervisor-wer";
+const BASE_URL = "/api/er/expense-report/salesman-wer";
 
 /**
  * Safely parses a fetch Response expecting JSON.
@@ -47,7 +48,7 @@ export async function fetchSuppliersList(): Promise<Supplier[]> {
 }
 
 /**
- * Fetches the list of weekly report headers created by the supervisor.
+ * Fetches the list of weekly report headers created by the salesman.
  * @returns {Promise<ExpenseDraftHeader[]>} A promise resolving to the list of headers.
  */
 export async function fetchHeadersList(): Promise<ExpenseDraftHeader[]> {
@@ -95,7 +96,12 @@ export async function createHeader(payload: {
  */
 export async function fetchWeeklyHeader(
   headerId: number
-): Promise<{ header: ExpenseDraftHeader | null; voucher: DisbursementDraft | null }> {
+): Promise<{
+  header: ExpenseDraftHeader | null;
+  voucher: DisbursementDraft | null;
+  attachments?: ExpenseAttachment[];
+  attachmentQuerySuccess?: boolean;
+}> {
   const res = await fetch(
     `${BASE_URL}?resource=header&header_id=${headerId}`
   );
@@ -122,7 +128,7 @@ export async function fetchExpenses(headerId: number): Promise<ExpenseDraft[]> {
 }
 
 /**
- * Fetches expense items returned with concern for a supplier under the supervisor's ownership.
+ * Fetches expense items returned with concern for a supplier under the salesman's ownership.
  * @param {number} supplierId - The ID of the supplier.
  * @returns {Promise<ExpenseDraft[]>} A promise resolving to the list of returned expense drafts.
  */
@@ -193,33 +199,41 @@ export async function deleteExpense(id: number): Promise<boolean> {
 }
 
 /**
- * Consolidates and submits the weekly expense report to the Bulk Approval module.
- * @param {object} payload - Submission payload.
- * @param {number} payload.header_id - Header ID.
- * @param {number} payload.supplier_id - Selected Supplier ID (Payee).
- * @param {number[]} payload.expense_ids - Array of expense IDs to approve and link.
- * @param {string} [payload.remarks] - General remarks.
- * @returns {Promise<{ ok: boolean; disbursement_id: number; doc_no: string }>} Result details.
+ * Saves a weekly expense report summary attachment metadata record in Directus.
+ * @returns {Promise<ExpenseAttachment>} The saved attachment metadata.
  */
-export async function submitWeeklyReport(payload: {
+export async function saveWERAttachment(payload: {
   header_id: number;
-  supplier_id: number;
-  expense_ids: number[];
-  remarks?: string;
-}): Promise<{ ok: boolean; disbursement_id?: number; doc_no?: string; error?: string }> {
-  const res = await fetch(`${BASE_URL}?resource=submit`, {
+  file_name: string;
+  file_url: string;
+  file_type?: string;
+  file_size?: number;
+}): Promise<ExpenseAttachment> {
+  const res = await fetch(`${BASE_URL}?resource=attachment`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    try {
-      const error = await parseJsonResponse(res);
-      return { ok: false, error: error.message || error.error || `Failed to submit weekly report (${res.status})` };
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : `Failed to submit weekly report (${res.status})`;
-      return { ok: false, error: errMsg };
-    }
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to save weekly report attachment (${res.status})`);
   }
-  return parseJsonResponse(res);
+  const data = await parseJsonResponse(res);
+  return data.data as ExpenseAttachment;
+}
+
+/**
+ * Deletes a weekly expense report summary attachment.
+ * @param {number} id - The ID of the attachment record.
+ * @returns {Promise<boolean>} A promise resolving to success.
+ */
+export async function deleteWERAttachment(id: number): Promise<boolean> {
+  const res = await fetch(`${BASE_URL}?resource=attachment&id=${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const error = await parseJsonResponse(res);
+    throw new Error(error.message || error.error || `Failed to delete weekly report attachment (${res.status})`);
+  }
+  return true;
 }

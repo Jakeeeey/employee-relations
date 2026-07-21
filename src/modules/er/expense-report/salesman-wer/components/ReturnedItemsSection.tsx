@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ExpenseDraft } from "../types/supervisor-wer.schema";
+import type { ExpenseDraft } from "../types/salesman-wer.schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Image as ImageIcon, RefreshCcw } from "lucide-react";

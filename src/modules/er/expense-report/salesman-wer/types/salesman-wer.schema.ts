@@ -11,7 +11,7 @@ export const ExpenseDraftSchema = z.object({
   amount: z.number(),
   payee: z.string().nullable().optional(),
   attachment_url: z.string().nullable().optional(),
-  status: z.enum(["Drafts", "Approved", "Rejected", "With Concern"]),
+  status: z.enum(["Drafts", "Submitted", "Approved", "Rejected", "With Concern"]),
   remarks: z.string().nullable().optional(),
   version: z.number(),
   feedback: z.string().nullable().optional(),
@@ -30,13 +30,14 @@ export const ExpenseDraftHeaderSchema = z.object({
   payee_id: z.union([z.number(), z.object({ id: z.number(), supplier_name: z.string() })]).nullable().optional(),
   period_from: z.string(), // YYYY-MM-DD
   period_to: z.string(), // YYYY-MM-DD
-  created_by: z.number(), // supervisor user_id
+  created_by: z.number(), // salesman user_id
   created_at: z.string().optional(),
   remarks: z.string().nullable().optional(),
   status: z.string().nullable().optional(),
   lines_count: z.number().optional(),
   has_concern: z.boolean().optional(),
   voucher_status: z.string().nullable().optional(),
+  has_wer_file: z.boolean().optional(),
 });
 
 export type ExpenseDraftHeader = z.infer<typeof ExpenseDraftHeaderSchema>;
@@ -87,3 +88,16 @@ export const ExpenseFormInputSchema = z.object({
 });
 
 export type ExpenseFormInput = z.infer<typeof ExpenseFormInputSchema>;
+
+export const ExpenseAttachmentSchema = z.object({
+  id: z.number(),
+  header_id: z.number(),
+  file_name: z.string(),
+  file_url: z.string(),
+  file_type: z.string().nullable().optional(),
+  file_size: z.number().nullable().optional(),
+  uploaded_by: z.number(),
+  uploaded_at: z.string(),
+});
+
+export type ExpenseAttachment = z.infer<typeof ExpenseAttachmentSchema>;

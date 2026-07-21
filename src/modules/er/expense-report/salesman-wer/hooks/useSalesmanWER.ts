@@ -8,7 +8,8 @@ import type {
   ExpenseDraftHeader,
   COA,
   DisbursementDraft,
-} from "../types/supervisor-wer.schema";
+  ExpenseAttachment,
+} from "../types/salesman-wer.schema";
 import {
   fetchSuppliersList,
   fetchHeadersList,
@@ -19,10 +20,11 @@ import {
   fetchChartOfAccounts,
   createOrUpdateExpense,
   deleteExpense,
-  submitWeeklyReport,
-} from "../services/supervisorWER";
+  saveWERAttachment,
+  deleteWERAttachment,
+} from "../services/salesmanWER";
 
-interface UseSupervisorWERReturn {
+interface UseSalesmanWERReturn {
   suppliers: Supplier[];
   headersList: ExpenseDraftHeader[];
   selectedHeaderId: number | null;
@@ -31,6 +33,8 @@ interface UseSupervisorWERReturn {
   voucher: DisbursementDraft | null;
   expenses: ExpenseDraft[];
   returnedExpenses: ExpenseDraft[];
+  attachments: ExpenseAttachment[];
+  attachmentQuerySuccess: boolean;
   coaList: COA[];
   isLoading: boolean;
   error: string | null;
@@ -45,15 +49,16 @@ interface UseSupervisorWERReturn {
   }) => Promise<ExpenseDraftHeader>;
   handleSaveExpense: (data: Partial<ExpenseDraft>) => Promise<void>;
   handleDeleteExpense: (id: number) => Promise<void>;
-  handleSubmitWeekly: (remarks?: string) => Promise<void>;
+  handleUploadWER: (file: File) => Promise<void>;
+  handleDeleteWER: (id: number) => Promise<void>;
 }
 
 /**
- * Custom React hook that orchestrates state and mutations for the Supervisor WER module.
- * @param {number} supervisorId - The logged-in supervisor's user ID.
- * @returns {UseSupervisorWERReturn} The composed state and handlers for the UI.
+ * Custom React hook that orchestrates state and mutations for the Salesman WER module.
+ * @param {number} salesmanId - The logged-in salesman's user ID.
+ * @returns {UseSalesmanWERReturn} The composed state and handlers for the UI.
  */
-export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
+export function useSalesmanWER(salesmanId: number): UseSalesmanWERReturn {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [headersList, setHeadersList] = useState<ExpenseDraftHeader[]>([]);
   const [selectedHeaderId, setSelectedHeaderId] = useState<number | null>(null);
@@ -62,6 +67,8 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
   const [voucher, setVoucher] = useState<DisbursementDraft | null>(null);
   const [expenses, setExpenses] = useState<ExpenseDraft[]>([]);
   const [returnedExpenses, setReturnedExpenses] = useState<ExpenseDraft[]>([]);
+  const [attachments, setAttachments] = useState<ExpenseAttachment[]>([]);
+  const [attachmentQuerySuccess, setAttachmentQuerySuccess] = useState(true);
   const [coaList, setCoaList] = useState<COA[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +112,8 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
       setVoucher(null);
       setExpenses([]);
       setReturnedExpenses([]);
+      setAttachments([]);
+      setAttachmentQuerySuccess(true);
       return;
     }
 
@@ -112,11 +121,17 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
     setError(null);
     try {
       // 1. Fetch header details & related voucher
-      const { header: currentHeader, voucher: currentVoucher } = await fetchWeeklyHeader(
-        selectedHeaderId
-      );
+      const { 
+        header: currentHeader, 
+        voucher: currentVoucher, 
+        attachments: currentAttachments = [], 
+        attachmentQuerySuccess: querySuccess = true 
+      } = await fetchWeeklyHeader(selectedHeaderId);
+      
       setHeader(currentHeader);
       setVoucher(currentVoucher);
+      setAttachments(currentAttachments);
+      setAttachmentQuerySuccess(querySuccess);
 
       if (currentHeader) {
         // Resolve supplier ID
@@ -205,7 +220,7 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
     const payload = {
       ...expenseData,
       header_id: header.id,
-      encoded_by: supervisorId,
+      encoded_by: salesmanId,
       division_id: header.division_id,
       payee_id: supplierId,
       payee: supplierName,
@@ -244,68 +259,66 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
     }
   };
 
-  /**
-   * Handler to approve the weekly report lines and submit the disbursement voucher.
-   * @param {string} [remarks] - Voucher general remarks.
-   */
-  const handleSubmitWeekly = async (remarks?: string) => {
-    if (!header || expenses.length === 0) {
-      toast.error("Error", { description: "No expenses to submit for this header" });
+  const handleUploadWER = async (file: File) => {
+    if (!header) {
+      toast.error("Error", { description: "Weekly report header not selected" });
       return;
     }
 
-    const supplierId = typeof header.payee_id === "object" && header.payee_id !== null
-      ? header.payee_id.id
-      : header.payee_id;
-
-    if (!supplierId) {
-      toast.error("Error", { description: "Supplier payee not found on header" });
-      return;
-    }
-
-    // Client-side validation: Ensure submission remarks are provided
-    if (!remarks || !remarks.trim()) {
-      toast.error("Submission Failed", {
-        description: "Submission remarks are required.",
-      });
-      return;
-    }
-
-    // Client-side validation: Ensure all lines have a valid receipt attachment
-    const missingAttachment = expenses.find((exp) => !exp.attachment_url);
-    if (missingAttachment) {
-      toast.error("Submission Failed", {
-        description: "Cannot submit weekly report: all lines must have a valid receipt attachment.",
-      });
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size limit exceeded", { description: "Maximum allowed file size is 10MB" });
       return;
     }
 
     setIsLoading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
     try {
-      const ids = expenses.map((e) => e.id);
-      const res = await submitWeeklyReport({
-        header_id: header.id,
-        supplier_id: supplierId,
-        expense_ids: ids,
-        remarks,
+      // 1. Upload to storage
+      const res = await fetch("/api/er/expense-report/salesman-wer/upload", {
+        method: "POST",
+        body: formData,
       });
 
-      if (res.ok) {
-        toast.success("Success", {
-          description: `Voucher ${res.doc_no} submitted successfully to Bulk Approval.`,
-        });
-        // Re-fetch header details and refresh headers list status
-        const updatedList = await fetchHeadersList();
-        setHeadersList(updatedList);
-        await fetchData();
-        setStep(1); // Return to list view upon submission
-      } else {
-        toast.error("Submission Failed", { description: res.error || "Could not consolidate voucher" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `Failed to upload file (${res.status})`);
       }
+
+      // 2. Save metadata
+      await saveWERAttachment({
+        header_id: header.id,
+        file_name: file.name,
+        file_url: data.file_url,
+        file_type: data.type || file.type,
+        file_size: data.filesize || file.size,
+      });
+
+      toast.success("Success", { description: "WER Summary uploaded successfully" });
+      await fetchData();
     } catch (err: unknown) {
-      console.error("Submission error:", err);
-      const errMsg = err instanceof Error ? err.message : "Could not consolidate voucher";
-      toast.error("Submission Failed", { description: errMsg });
+      console.error("WER upload error:", err);
+      const errMsg = err instanceof Error ? err.message : "Failed to upload file";
+      toast.error("Upload failed", { description: errMsg });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteWER = async (id: number) => {
+    const proceed = window.confirm("Are you sure you want to delete this WER summary file?");
+    if (!proceed) return;
+
+    setIsLoading(true);
+    try {
+      await deleteWERAttachment(id);
+      toast.success("Success", { description: "WER Summary deleted successfully" });
+      await fetchData();
+    } catch (err: unknown) {
+      console.error("WER delete error:", err);
+      const errMsg = err instanceof Error ? err.message : "Failed to delete attachment";
+      toast.error("Delete failed", { description: errMsg });
     } finally {
       setIsLoading(false);
     }
@@ -320,6 +333,8 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
     voucher,
     expenses,
     returnedExpenses,
+    attachments,
+    attachmentQuerySuccess,
     coaList,
     isLoading,
     error,
@@ -329,6 +344,7 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
     handleCreateHeader,
     handleSaveExpense,
     handleDeleteExpense,
-    handleSubmitWeekly,
+    handleUploadWER,
+    handleDeleteWER,
   };
 }
