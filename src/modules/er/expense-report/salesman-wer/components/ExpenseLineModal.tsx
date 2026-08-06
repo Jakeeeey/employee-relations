@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ExpenseDraft, COA, ExpenseFormInput } from "../types/supervisor-wer.schema";
-import { ExpenseFormInputSchema } from "../types/supervisor-wer.schema";
+import type { ExpenseDraft, COA, ExpenseFormInput } from "../types/salesman-wer.schema";
+import { ExpenseFormInputSchema } from "../types/salesman-wer.schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Spinner } from "@/components/ui/spinner";
 import { Upload, X, Paperclip, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { parseJsonResponse } from "../services/supervisorWER";
+import { parseJsonResponse } from "../services/salesmanWER";
 
 interface ExpenseLineModalProps {
   isOpen: boolean;
@@ -49,7 +49,7 @@ export function ExpenseLineModal({
     reset,
     control,
     setError,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ExpenseFormInput>({
     resolver: zodResolver(ExpenseFormInputSchema),
     defaultValues: {
@@ -109,7 +109,7 @@ export function ExpenseLineModal({
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/er/expense-report/supervisor-wer/upload", {
+      const res = await fetch("/api/er/expense-report/salesman-wer/upload", {
         method: "POST",
         body: formData,
       });
@@ -120,7 +120,7 @@ export function ExpenseLineModal({
       }
 
       setUploadedFilename(file.name);
-      setValue("attachment_url", data.file_url);
+      setValue("attachment_url", data.file_url, { shouldDirty: true });
       toast.success("Receipt uploaded successfully");
     } catch (err: unknown) {
       console.error("Upload error:", err);
@@ -133,7 +133,7 @@ export function ExpenseLineModal({
 
   const handleRemoveAttachment = () => {
     setUploadedFilename(null);
-    setValue("attachment_url", "");
+    setValue("attachment_url", "", { shouldDirty: true });
   };
 
   const onSubmitForm = async (data: ExpenseFormInput) => {
@@ -176,7 +176,7 @@ export function ExpenseLineModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[480px] rounded-[2rem] border-slate-200/80 dark:border-white/10 shadow-2xl p-6 overflow-hidden">
+      <DialogContent className="w-[min(calc(100vw-2rem),480px)] max-w-[calc(100vw-2rem)] min-w-0 rounded-[2rem] border-slate-200/80 dark:border-white/10 shadow-2xl p-6 overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-lg font-black tracking-tight">
             {editingItem ? "Edit Expense Line" : "Add Expense Line"}
@@ -193,9 +193,9 @@ export function ExpenseLineModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit(onSubmitForm)} className="min-w-0 max-w-full space-y-4 pt-2">
           {/* Transaction Date */}
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label className="text-xs font-semibold text-slate-500">Transaction Date</Label>
             <Input
               type="date"
@@ -208,7 +208,7 @@ export function ExpenseLineModal({
           </div>
 
           {/* Payee / Merchant */}
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label className="text-xs font-semibold text-slate-500">Merchant (Payee)</Label>
             <Input
               placeholder="e.g. Shell Gas Station, Office Warehouse"
@@ -221,7 +221,7 @@ export function ExpenseLineModal({
           </div>
 
           {/* Particulars (GL Account) */}
-          <div className="space-y-1 flex flex-col">
+          <div className="min-w-0 max-w-full space-y-1 flex flex-col overflow-hidden">
             <Label className="text-xs font-semibold text-slate-500 mb-1">GL Account (Particulars)</Label>
             <Controller
               control={control}
@@ -237,7 +237,7 @@ export function ExpenseLineModal({
                     value={field.value ? String(field.value) : ""}
                     onValueChange={(val) => field.onChange(val ? Number(val) : undefined)}
                     placeholder="Search GL Account..."
-                    className="h-10 rounded-xl border-slate-200/80 dark:border-white/10 text-left font-normal"
+                    className="h-10 min-w-0 max-w-full shrink rounded-xl border-slate-200/80 dark:border-white/10 text-left font-normal"
                   />
                 );
               }}
@@ -248,7 +248,7 @@ export function ExpenseLineModal({
           </div>
 
           {/* Amount */}
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label className="text-xs font-semibold text-slate-500">Amount (PHP)</Label>
             <Input
               type="number"
@@ -263,7 +263,7 @@ export function ExpenseLineModal({
           </div>
 
           {/* Remarks */}
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <Label className="text-xs font-semibold text-slate-500">Remarks / Particular Description <span className="text-rose-500">*</span></Label>
             <Textarea
               placeholder="Provide a detailed description of the expense... (Required)"
@@ -276,7 +276,7 @@ export function ExpenseLineModal({
           </div>
 
           {/* File Upload Attachment */}
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <Label className="text-xs font-semibold text-slate-500">Receipt Attachment</Label>
             {attachmentUrl ? (
               <div className="flex items-center justify-between p-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 text-xs text-cyan-700 dark:text-cyan-400">
@@ -333,7 +333,7 @@ export function ExpenseLineModal({
             </Button>
             <Button
               type="submit"
-              disabled={isSaving || isUploading}
+              disabled={isSaving || isUploading || (!!editingItem && !isDirty)}
               className="h-10 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold cursor-pointer transition-transform transform active:scale-95 shadow-md flex items-center justify-center gap-1"
             >
               {isSaving && <Spinner className="h-4 w-4 text-white" />}

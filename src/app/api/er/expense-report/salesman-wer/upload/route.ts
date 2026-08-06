@@ -45,6 +45,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "text/csv"
+    ];
+    if (file.type && !allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: "Invalid file type. Only images, PDF, Excel, and CSV are allowed." }, { status: 400 });
+    }
+
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json({ error: "File size exceeds 10MB limit" }, { status: 400 });
     }
