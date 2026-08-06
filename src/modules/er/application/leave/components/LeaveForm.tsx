@@ -71,12 +71,6 @@ export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFor
     fetchBalance();
   }, [userId, initialData?.user_id, initialData?.leave_id]);
 
-  useEffect(() => {
-    if (leaveType !== "vacation" && leaveType !== "sick") {
-      setValue("is_paid", false, { shouldValidate: true });
-    }
-  }, [leaveType, setValue]);
-
   const remainingDays = balance
     ? leaveType === "vacation"
       ? balance.vacation.remaining
@@ -84,6 +78,14 @@ export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFor
       ? balance.sick.remaining
       : 0
     : 0;
+
+  useEffect(() => {
+    if (leaveType !== "vacation" && leaveType !== "sick") {
+      setValue("is_paid", false, { shouldValidate: true });
+    } else if (isPaid && (totalDays > remainingDays || remainingDays === 0)) {
+      setValue("is_paid", false, { shouldValidate: true });
+    }
+  }, [leaveType, isPaid, totalDays, remainingDays, setValue]);
 
   const isPaidExceeded = isPaid && totalDays > remainingDays;
 
@@ -251,14 +253,15 @@ export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFor
                     <Switch
                       checked={field.value}
                       onCheckedChange={field.onChange}
+                      disabled={remainingDays === 0 || totalDays > remainingDays}
                     />
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            {isPaid && balance && (
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs border-t pt-3">
+            {balance && (
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs border-t border-border pt-3">
                 <div className="p-2 rounded bg-muted/40">
                   <div className="font-semibold text-muted-foreground">Annual Limit</div>
                   <div className="text-sm font-bold mt-1 text-foreground">
