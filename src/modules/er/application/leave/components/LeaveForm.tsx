@@ -13,32 +13,79 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Switch } from "@/components/ui/switch";
 
 interface LeaveFormProps {
   initialData?: LeaveRequest;
   onSubmit: (data: CreateLeaveInput) => Promise<void>;
   isLoading?: boolean;
+  userId?: number;
 }
 
-export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) {
+export function LeaveForm({ initialData, onSubmit, isLoading, userId }: LeaveFormProps) {
+  const [balance, setBalance] = useState<{
+    vacation: { limit: number; used: number; remaining: number };
+    sick: { limit: number; used: number; remaining: number };
+  } | null>(null);
+
   const form = useForm<CreateLeaveInput>({
-    resolver: zodResolver(CreateLeaveSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(CreateLeaveSchema) as any,
     defaultValues: {
       leave_type: initialData?.leave_type || "vacation",
       leave_start: initialData?.leave_start || null,
       leave_end: initialData?.leave_end || null,
       total_days: initialData?.total_days || 0,
       reason: initialData?.reason || "",
-      user_id: initialData?.user_id || 0,
+      user_id: initialData?.user_id || userId || 0,
       department_id: initialData?.department_id || null,
       remarks: initialData?.remarks || null,
+      is_paid: initialData?.is_paid || false,
     },
   });
 
   const { setValue, control } = form;
   const leaveStart = useWatch({ control, name: "leave_start" });
   const leaveEnd = useWatch({ control, name: "leave_end" });
+  const leaveType = useWatch({ control, name: "leave_type" });
+  const isPaid = useWatch({ control, name: "is_paid" });
+  const totalDays = useWatch({ control, name: "total_days" });
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      const activeUserId = userId || initialData?.user_id;
+      if (!activeUserId) return;
+      try {
+        const excludeParam = initialData?.leave_id ? `&excludeLeaveId=${initialData.leave_id}` : "";
+        const res = await fetch(`/api/er/application/leave/balance?userId=${activeUserId}${excludeParam}`);
+        const result = await res.json();
+        if (result.ok) {
+          setBalance(result.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch leave balance", err);
+      }
+    };
+
+    fetchBalance();
+  }, [userId, initialData?.user_id, initialData?.leave_id]);
+
+  useEffect(() => {
+    if (leaveType !== "vacation" && leaveType !== "sick") {
+      setValue("is_paid", false, { shouldValidate: true });
+    }
+  }, [leaveType, setValue]);
+
+  const remainingDays = balance
+    ? leaveType === "vacation"
+      ? balance.vacation.remaining
+      : leaveType === "sick"
+      ? balance.sick.remaining
+      : 0
+    : 0;
+
+  const isPaidExceeded = isPaid && totalDays > remainingDays;
 
   useEffect(() => {
     if (leaveStart && leaveEnd) {
@@ -187,6 +234,60 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
           )}
         />
 
+        {(leaveType === "vacation" || leaveType === "sick") && (
+          <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
+            <FormField
+              control={form.control}
+              name="is_paid"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between">
+                  <div className="space-y-0.5 pr-2">
+                    <FormLabel className="text-sm font-semibold">Paid Leave</FormLabel>
+                    <div className="text-xs text-muted-foreground">
+                      Deduct requested days from your paid leave balance.
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {isPaid && balance && (
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs border-t pt-3">
+                <div className="p-2 rounded bg-muted/40">
+                  <div className="font-semibold text-muted-foreground">Annual Limit</div>
+                  <div className="text-sm font-bold mt-1 text-foreground">
+                    {leaveType === "vacation" ? balance.vacation.limit : balance.sick.limit} d
+                  </div>
+                </div>
+                <div className="p-2 rounded bg-muted/40">
+                  <div className="font-semibold text-muted-foreground">Used</div>
+                  <div className="text-sm font-bold mt-1 text-amber-600">
+                    {leaveType === "vacation" ? balance.vacation.used : balance.sick.used} d
+                  </div>
+                </div>
+                <div className="p-2 rounded bg-muted/40">
+                  <div className="font-semibold text-muted-foreground">Remaining</div>
+                  <div className="text-sm font-bold mt-1 text-emerald-600">
+                    {leaveType === "vacation" ? balance.vacation.remaining : balance.sick.remaining} d
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isPaid && isPaidExceeded && (
+              <div className="text-xs font-semibold text-destructive mt-1">
+                Warning: Requesting {totalDays} day(s) exceeds your remaining paid balance of {remainingDays} day(s).
+              </div>
+            )}
+          </div>
+        )}
+
         <FormField
           control={form.control}
           name="reason"
@@ -201,7 +302,7 @@ export function LeaveForm({ initialData, onSubmit, isLoading }: LeaveFormProps) 
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" disabled={isLoading || isPaidExceeded}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {initialData ? "Update Leave Request" : "Submit Leave Request"}
         </Button>

@@ -11,9 +11,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/shared/app-sidebar/nav-user";
 
 import { cookies } from "next/headers";
-
-// ✅ Wire the module you asked for
-import ComingSoon from "../_components/ComingSoon";
+import { ProfileModule } from "@/modules/er/profile/ProfileModule";
+import { ProfileService } from "@/modules/er/profile/services/profileService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,10 +77,20 @@ export default async function Page() {
     const token = cookieStore.get(COOKIE_NAME)?.value ?? null;
 
     const headerUser = buildHeaderUserFromToken(token);
+    
+    // Fetch profile data
+    let profileData = null;
+    if (token) {
+        const payload = decodeJwtPayload(token);
+        const userId = payload?.id || payload?.user_id || payload?.sub;
+        if (userId) {
+            profileData = await ProfileService.getProfile(Number(userId));
+        }
+    }
 
     return (
         // ✅ This fills the RIGHT column provided by SidebarInset (which is now fixed-height).
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20">
             {/* ✅ Topbar is fixed in place because ONLY <main> scrolls */}
             <header className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b shadow-sm bg-background sm:h-16 overflow-hidden">
                 <div className="flex h-full min-w-0 items-center gap-2 px-3 sm:px-4 overflow-hidden">
@@ -96,7 +105,7 @@ export default async function Page() {
                         <Breadcrumb>
                             <BreadcrumbList className="min-w-0 overflow-hidden">
                                 <BreadcrumbItem className="hidden md:block shrink-0">
-                                    <BreadcrumbLink href="#">CRM</BreadcrumbLink>
+                                    <BreadcrumbLink href="#">ER</BreadcrumbLink>
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator className="hidden md:block shrink-0" />
                                 <BreadcrumbItem className="min-w-0 overflow-hidden">
@@ -115,8 +124,14 @@ export default async function Page() {
             </header>
 
             {/* ✅ Only content scrolls inside RIGHT column */}
-            <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4">
-                <ComingSoon />
+            <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+                {profileData ? (
+                    <ProfileModule profile={profileData} />
+                ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                        <p>Could not load profile data. Please try again later.</p>
+                    </div>
+                )}
             </main>
         </div>
     );

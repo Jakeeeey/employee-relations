@@ -56,6 +56,25 @@ export function LeaveTable({ data, onEdit, onView }: LeaveTableProps) {
       cell: ({ row }) => <span className="truncate max-w-[200px] block">{row.getValue("reason")}</span>,
     },
     {
+      accessorKey: "is_paid",
+      header: "Payment",
+      cell: ({ row }) => {
+        const isPaid = row.getValue("is_paid");
+        const resolvedIsPaid = isPaid === true || isPaid === 1 || String(isPaid) === "true";
+        return (
+          <Badge 
+            variant="outline" 
+            className={resolvedIsPaid 
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60" 
+              : "bg-muted/50 text-muted-foreground border-border"
+            }
+          >
+            {resolvedIsPaid ? "Paid" : "Unpaid"}
+          </Badge>
+        );
+      },
+    },
+    {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
