@@ -170,9 +170,15 @@ export function useSupervisorWER(supervisorId: number): UseSupervisorWERReturn {
       setStep(2); // Auto proceed to Step 2 (lines editor)
       return newHeader;
     } catch (err: unknown) {
-      console.error("Error creating header:", err);
       const errMsg = err instanceof Error ? err.message : "Failed to create header";
-      toast.error("Error", { description: errMsg });
+      const isDuplicate = errMsg.toLowerCase().includes("already exists");
+      if (isDuplicate) {
+        console.warn("Duplicate header attempt:", errMsg);
+        toast.warning("Already Exists", { description: errMsg });
+      } else {
+        console.error("Error creating header:", err);
+        toast.error("Error", { description: errMsg });
+      }
       throw err;
     } finally {
       setIsLoading(false);
