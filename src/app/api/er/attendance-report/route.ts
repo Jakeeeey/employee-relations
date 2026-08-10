@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AttendanceChangeRequest, AttendanceChangeRequestFile } from "../../../../modules/er/attendance-report/type";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -49,15 +50,40 @@ export async function GET(request: NextRequest) {
     const userIdNum = Number(userId);
     console.log(`[Attendance Report] Fetching data for user_id: ${userIdNum}`);
 
-    const [userResponse, attendanceLogsResponse] = await Promise.all([
+    const [userResponse, attendanceLogsResponse, changeRequestsResponse] = await Promise.all([
       directusFetch(`/items/user?filter[user_id][_eq]=${userIdNum}`),
       directusFetch(
         `/items/attendance_log?filter[user_id][_eq]=${userIdNum}&sort=-log_date&limit=-1`
       ),
+      directusFetch(
+        `/items/attendance_change_request?filter[user_id][_eq]=${userIdNum}&filter[status][_eq]=pending`
+      ).catch(() => ({ data: [] })), // Catch error in case the collection doesn't exist yet
     ]);
 
     const user = userResponse.data?.[0];
     const attendanceLogs = attendanceLogsResponse.data || [];
+    const changeRequests = changeRequestsResponse.data || [];
+
+    // Manually fetch junction table files since Directus might not have the alias field configured
+    if (changeRequests.length > 0) {
+      try {
+        const requestIds = changeRequests.map((r: AttendanceChangeRequest) => r.id).join(',');
+        const junctionResponse = await directusFetch(
+          `/items/attendance_change_request_files?filter[attendance_change_request_id][_in]=${requestIds}&fields=*,directus_files_id.id,directus_files_id.filename_download`
+        );
+        
+        const junctionData = junctionResponse.data || [];
+        
+        // Attach files to their respective requests
+        changeRequests.forEach((req: AttendanceChangeRequest) => {
+          req.attendance_change_request_files = junctionData.filter(
+            (j: AttendanceChangeRequestFile) => String(j.attendance_change_request_id) === String(req.id)
+          );
+        });
+      } catch (err) {
+        console.error("Error fetching junction files:", err);
+      }
+    }
 
     console.log(`[Attendance Report] User found: ${user?.user_fname}, Records: ${attendanceLogs.length}`);
 
@@ -84,6 +110,7 @@ export async function GET(request: NextRequest) {
       {
         user,
         attendanceLogs,
+        changeRequests,
       },
       { status: 200 }
     );

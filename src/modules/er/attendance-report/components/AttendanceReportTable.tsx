@@ -11,9 +11,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Edit } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { RequestChangeDialog } from "./RequestChangeDialog";
+import { ViewChangeRequestDialog } from "./ViewChangeRequestDialog";
 
 interface AttendanceReportTableProps {
   data: AttendanceLog[];
+  userId: number;
+  onRefresh?: () => void;
 }
 
 function formatDateTime(val: string | undefined, formatStr: string): string {
@@ -26,12 +40,28 @@ function formatDateTime(val: string | undefined, formatStr: string): string {
   }
 }
 
-export function AttendanceReportTable({ data }: AttendanceReportTableProps) {
+export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceReportTableProps) {
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<AttendanceLog | null>(null);
   const columns: ColumnDef<AttendanceLog>[] = [
     {
       accessorKey: "log_date",
       header: "Date",
-      cell: ({ row }) => formatDateTime(row.getValue("log_date") as string, "MMM dd, yyyy"),
+      cell: ({ row }) => {
+        const dateStr = formatDateTime(row.getValue("log_date") as string, "MMM dd, yyyy");
+        const hasPending = row.original.has_pending_change_request;
+        return (
+          <div className="flex items-center gap-2">
+            <span>{dateStr}</span>
+            {hasPending && (
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
+                Change Pending
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "time_in",
@@ -62,6 +92,36 @@ export function AttendanceReportTable({ data }: AttendanceReportTableProps) {
       accessorKey: "time_out",
       header: "Time Out",
       cell: ({ row }) => formatDateTime(row.getValue("time_out") as string, "hh:mm a"),
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedLog(row.original);
+                  if (row.original.has_pending_change_request) {
+                    setIsViewDialogOpen(true);
+                  } else {
+                    setIsRequestDialogOpen(true);
+                  }
+                }}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                {row.original.has_pending_change_request ? "View Pending Request" : "Request Change"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 
@@ -126,6 +186,9 @@ export function AttendanceReportTable({ data }: AttendanceReportTableProps) {
                         <TableCell className="py-2"></TableCell>
                         <TableCell className="py-2"></TableCell>
                         <TableCell className="py-2"></TableCell>
+                        <TableCell className="py-2 text-right">
+                          {flexRender(row.getVisibleCells()[row.getVisibleCells().length - 1].column.columnDef.cell, row.getVisibleCells()[row.getVisibleCells().length - 1].getContext())}
+                        </TableCell>
                       </>
                     ) : (
                       row.getVisibleCells().map((cell) => (
@@ -150,6 +213,21 @@ export function AttendanceReportTable({ data }: AttendanceReportTableProps) {
           </TableBody>
         </Table>
       </div>
+
+      <RequestChangeDialog
+        open={isRequestDialogOpen}
+        onOpenChange={setIsRequestDialogOpen}
+        attendanceLog={selectedLog}
+        userId={userId}
+        onSuccess={onRefresh}
+      />
+      <ViewChangeRequestDialog
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        attendanceLog={selectedLog}
+        userId={userId}
+        onSuccess={onRefresh}
+      />
     </div>
   );
 }

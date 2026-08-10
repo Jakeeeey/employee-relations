@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { AttendanceLog } from "./type";
+import { AttendanceLog, AttendanceChangeRequest } from "./type";
 
 interface AttendanceReportModuleProps {
   userId: number;
@@ -36,14 +36,20 @@ interface AttendanceReportModuleProps {
 
 const ITEMS_PER_PAGE = 10;
 
-// Helper function to fill in missing work days (Monday-Saturday) as absent
-function fillMissingWorkDays(logs: AttendanceLog[]): AttendanceLog[] {
-  if (logs.length === 0) return [];
-
-  // Get date range from logs
-  const dates = logs.map((log) => new Date(log.log_date).getTime());
-  const minDate = new Date(Math.min(...dates));
-  const maxDate = new Date(Math.max(...dates));
+function fillMissingWorkDays(logs: AttendanceLog[], changeRequests: AttendanceChangeRequest[] = []): AttendanceLog[] {
+  // If no logs, default to the current month's date range
+  let minDate = new Date();
+  let maxDate = new Date();
+  
+  if (logs.length === 0) {
+    const now = new Date();
+    minDate = new Date(now.getFullYear(), now.getMonth(), 1); // First day of current month
+    maxDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+  } else {
+    const dates = logs.map((log) => new Date(log.log_date).getTime());
+    minDate = new Date(Math.min(...dates));
+    maxDate = new Date(Math.max(...dates));
+  }
 
   // Create a map of existing log dates for quick lookup
   const existingDates = new Set(
@@ -66,6 +72,12 @@ function fillMissingWorkDays(logs: AttendanceLog[]): AttendanceLog[] {
 
       // If this date doesn't exist in logs, add an absent entry
       if (!existingDates.has(dateStr)) {
+        
+        const pendingReq = changeRequests.find((req: AttendanceChangeRequest) => {
+          const reqDateStr = new Date(req.log_date).toISOString().split('T')[0];
+          return reqDateStr === dateStr;
+        });
+
         filledLogs.push({
           log_id: -1, // Temporary ID for absent entries
           user_id: logs[0]?.user_id || 0,
@@ -81,6 +93,8 @@ function fillMissingWorkDays(logs: AttendanceLog[]): AttendanceLog[] {
           department_id: null,
           image_time_in: null,
           image_time_out: null,
+          has_pending_change_request: !!pendingReq,
+          pending_change_request: pendingReq || undefined,
         });
       }
     }
@@ -105,7 +119,7 @@ export default function AttendanceReportModule({
   const [openFromPopover, setOpenFromPopover] = useState(false);
   const [openToPopover, setOpenToPopover] = useState(false);
 
-  const { user, attendanceLogs, isLoading, error, refresh } =
+  const { user, attendanceLogs, changeRequests, isLoading, error, refresh } =
     useAttendanceReport(initialUserId);
 
   const handleRefresh = async () => {
@@ -121,7 +135,7 @@ export default function AttendanceReportModule({
   };
 
   // First, fill in missing work days (Monday-Saturday) as absent
-  const logsWithAbsences = fillMissingWorkDays(attendanceLogs);
+  const logsWithAbsences = fillMissingWorkDays(attendanceLogs, changeRequests);
 
   // Then apply the date filter on the filled list so even
   // auto-generated "Absent" days are included in the range
@@ -348,7 +362,7 @@ export default function AttendanceReportModule({
           </div>
         </CardHeader>
         <CardContent>
-          {attendanceLogs.length === 0 ? (
+          {displayedLogs.length === 0 && !fromDate && !toDate && filterAbsent === "all" ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
                 No attendance records found
@@ -357,7 +371,7 @@ export default function AttendanceReportModule({
           ) : (
             <>
               <div className="rounded-md border border-slate-200 dark:border-slate-700 h-96">
-                <AttendanceReportTable data={paginatedLogs} />
+                <AttendanceReportTable data={paginatedLogs} userId={initialUserId} onRefresh={handleRefresh} />
               </div>
 
               {/* Pagination Controls */}
