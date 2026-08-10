@@ -17,6 +17,8 @@ export const AttendanceLogSchema = z.object({
   image_time_out: z.string().nullable(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
+  has_pending_change_request: z.boolean().optional(),
+  pending_change_request: z.any().optional(),
 });
 
 export type AttendanceLog = z.infer<typeof AttendanceLogSchema>;
@@ -38,7 +40,29 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
+export interface AttendanceChangeRequestFile {
+  id?: number;
+  attendance_change_request_id?: number;
+  directus_files_id?: string | { id: string; filename_download?: string };
+}
+
+export interface AttendanceChangeRequest {
+  id: number;
+  user_id: number;
+  log_date: string;
+  reason: string;
+  status: string;
+  time_in?: string;
+  lunch_start?: string;
+  lunch_end?: string;
+  break_start?: string;
+  break_end?: string;
+  time_out?: string;
+  attendance_change_request_files?: AttendanceChangeRequestFile[];
+}
+
 export interface AttendanceReportData {
   user: User;
   attendanceLogs: AttendanceLog[];
+  changeRequests?: AttendanceChangeRequest[];
 }
