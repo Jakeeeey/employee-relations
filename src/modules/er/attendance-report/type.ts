@@ -19,6 +19,9 @@ export const AttendanceLogSchema = z.object({
   updated_at: z.string().optional(),
   has_pending_change_request: z.boolean().optional(),
   pending_change_request: z.any().optional(),
+  is_on_leave: z.boolean().optional(),
+  is_pending_leave: z.boolean().optional(),
+  leave_details: z.any().optional(),
 });
 
 export type AttendanceLog = z.infer<typeof AttendanceLogSchema>;
@@ -61,8 +64,20 @@ export interface AttendanceChangeRequest {
   attendance_change_request_files?: AttendanceChangeRequestFile[];
 }
 
+export interface LeaveRequest {
+  leave_id: number;
+  user_id: number;
+  leave_type: string;
+  leave_start: string;
+  leave_end: string;
+  status: string;
+  is_paid?: number | boolean;
+  [key: string]: unknown;
+}
+
 export interface AttendanceReportData {
   user: User;
   attendanceLogs: AttendanceLog[];
   changeRequests?: AttendanceChangeRequest[];
+  leaveRequests?: LeaveRequest[];
 }

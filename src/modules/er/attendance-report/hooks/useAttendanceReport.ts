@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AttendanceLog, User, AttendanceChangeRequest } from "../type";
+import { AttendanceLog, User, AttendanceChangeRequest, LeaveRequest } from "../type";
 import { toast } from "sonner";
 
 interface UseAttendanceReportReturn {
   user: User | null;
   attendanceLogs: AttendanceLog[];
-  changeRequests: AttendanceChangeRequest[]; // Or AttendanceChangeRequest[] if imported
+  changeRequests: AttendanceChangeRequest[];
+  leaveRequests: LeaveRequest[];
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -17,6 +18,7 @@ export function useAttendanceReport(userId?: number): UseAttendanceReportReturn 
   const [user, setUser] = useState<User | null>(null);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [changeRequests, setChangeRequests] = useState<AttendanceChangeRequest[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +31,9 @@ export function useAttendanceReport(userId?: number): UseAttendanceReportReturn 
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/er/attendance-report?userId=${userId}`);
+      const res = await fetch(`/api/er/attendance-report?userId=${userId}`, {
+        cache: 'no-cache'
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -41,7 +45,10 @@ export function useAttendanceReport(userId?: number): UseAttendanceReportReturn 
       const fetchedRequests = data.changeRequests || [];
       setChangeRequests(fetchedRequests);
 
-      // Merge pending request indicator into logs
+      const fetchedLeaves = data.leaveRequests || [];
+      setLeaveRequests(fetchedLeaves);
+
+      // Merge pending request indicator and leave status into logs
       const mergedLogs = (data.attendanceLogs || []).map((log: AttendanceLog) => {
         // Find if this specific log_date has a pending request
         const logDateStr = new Date(log.log_date).toISOString().split('T')[0];
@@ -49,11 +56,26 @@ export function useAttendanceReport(userId?: number): UseAttendanceReportReturn 
           const reqDateStr = new Date(req.log_date).toISOString().split('T')[0];
           return reqDateStr === logDateStr;
         });
+
+        // Find if log_date is within any leave request
+        const leave = fetchedLeaves.find((l: LeaveRequest) => {
+          if (!l.leave_start || !l.leave_end || !log.log_date) return false;
+          if (l.status !== 'approved' && l.status !== 'pending') return false;
+          
+          const logDateStr = log.log_date.split('T')[0];
+          const startDateStr = l.leave_start.split('T')[0];
+          const endDateStr = l.leave_end.split('T')[0];
+
+          return logDateStr >= startDateStr && logDateStr <= endDateStr;
+        });
         
         return {
           ...log,
           has_pending_change_request: !!pendingReq,
           pending_change_request: pendingReq || undefined,
+          is_on_leave: !!leave && leave.status === 'approved',
+          is_pending_leave: !!leave && leave.status === 'pending',
+          leave_details: leave || undefined,
         };
       });
 
@@ -75,6 +97,7 @@ export function useAttendanceReport(userId?: number): UseAttendanceReportReturn 
     user,
     attendanceLogs,
     changeRequests,
+    leaveRequests,
     isLoading,
     error,
     refresh: fetchData,
