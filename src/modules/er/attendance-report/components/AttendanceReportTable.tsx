@@ -162,15 +162,25 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => {
                 const isAbsent = !row.original.time_in;
+                const isLeave = row.original.is_on_leave;
+                const isPendingLeave = row.original.is_pending_leave;
                 
                 return (
                   <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
                       className={`${
-                        isAbsent 
-                          ? "bg-red-200 hover:bg-red-300 dark:bg-red-900/50 dark:hover:bg-red-900/60" 
-                          : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
+                        isAbsent && isLeave
+                          ? "bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/40 dark:hover:bg-blue-900/50"
+                          : isAbsent && isPendingLeave
+                            ? "bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/40 dark:hover:bg-orange-900/50"
+                            : isAbsent 
+                              ? "bg-red-200 hover:bg-red-300 dark:bg-red-900/50 dark:hover:bg-red-900/60" 
+                              : isLeave
+                                ? "bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
+                                : isPendingLeave
+                                  ? "bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30"
+                                  : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
                       } data-[state=selected]:bg-slate-50 dark:data-[state=selected]:bg-slate-800/30 border-b border-slate-200 dark:border-slate-700`}
                     >
                     {isAbsent ? (
@@ -180,8 +190,15 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
                         </TableCell>
                         <TableCell className="py-2"></TableCell>
                         <TableCell className="py-2"></TableCell>
-                        <TableCell className="py-2 text-red-600 font-medium dark:text-red-400">
-                          Absent
+                        <TableCell className={`py-2 font-medium ${isLeave ? "text-blue-600 dark:text-blue-400" : isPendingLeave ? "text-orange-600 dark:text-orange-400" : "text-red-600 dark:text-red-400"}`}>
+                          <div className="flex items-center gap-2">
+                            <span>{isLeave ? "Leave" : isPendingLeave ? "Absent (Pending Leave)" : "Absent"}</span>
+                            {(isLeave || isPendingLeave) && row.original.leave_details && (
+                              <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${row.original.leave_details.is_paid ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800" : "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/30 dark:text-slate-400 dark:border-slate-700"}`}>
+                                {row.original.leave_details.is_paid ? "Paid" : "Unpaid"}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="py-2"></TableCell>
                         <TableCell className="py-2"></TableCell>

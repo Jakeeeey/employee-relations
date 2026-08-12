@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { AttendanceLog, AttendanceChangeRequest } from "./type";
+import { AttendanceLog, AttendanceChangeRequest, LeaveRequest } from "./type";
 
 interface AttendanceReportModuleProps {
   userId: number;
@@ -36,19 +36,44 @@ interface AttendanceReportModuleProps {
 
 const ITEMS_PER_PAGE = 10;
 
-function fillMissingWorkDays(logs: AttendanceLog[], changeRequests: AttendanceChangeRequest[] = []): AttendanceLog[] {
-  // If no logs, default to the current month's date range
-  let minDate = new Date();
-  let maxDate = new Date();
-  
-  if (logs.length === 0) {
-    const now = new Date();
-    minDate = new Date(now.getFullYear(), now.getMonth(), 1); // First day of current month
-    maxDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
-  } else {
-    const dates = logs.map((log) => new Date(log.log_date).getTime());
-    minDate = new Date(Math.min(...dates));
-    maxDate = new Date(Math.max(...dates));
+function fillMissingWorkDays(
+  logs: AttendanceLog[], 
+  changeRequests: AttendanceChangeRequest[] = [],
+  leaveRequests: LeaveRequest[] = [],
+  fromDateStr?: string,
+  toDateStr?: string
+): AttendanceLog[] {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  let minDate = new Date(now.getFullYear(), now.getMonth(), 1); // Default min: 1st of current month
+  let maxDate = today; // Default max: today
+
+  if (logs.length > 0) {
+    const dates = logs.map((log) => {
+       const [y, m, d] = log.log_date.split('-');
+       return new Date(Number(y), Number(m)-1, Number(d)).getTime();
+    });
+    const earliestLog = new Date(Math.min(...dates));
+    if (earliestLog < minDate) {
+      minDate = earliestLog;
+    }
+  }
+
+  if (fromDateStr) {
+    const [y, m, d] = fromDateStr.split('-');
+    minDate = new Date(Number(y), Number(m)-1, Number(d));
+  }
+
+  if (toDateStr) {
+    const [y, m, d] = toDateStr.split('-');
+    maxDate = new Date(Number(y), Number(m)-1, Number(d));
+  }
+
+  // Cap maxDate at today so we don't show "Absent" for future days, 
+  // unless explicitly requested via toDate
+  if (!toDateStr && maxDate > today) {
+    maxDate = today;
   }
 
   // Create a map of existing log dates for quick lookup
@@ -78,6 +103,17 @@ function fillMissingWorkDays(logs: AttendanceLog[], changeRequests: AttendanceCh
           return reqDateStr === dateStr;
         });
 
+        // Check if there is an overlapping leave request
+        const leave = leaveRequests.find((l: LeaveRequest) => {
+          if (!l.leave_start || !l.leave_end) return false;
+          if (l.status !== 'approved' && l.status !== 'pending') return false;
+          
+          const startDateStr = l.leave_start.split('T')[0];
+          const endDateStr = l.leave_end.split('T')[0];
+
+          return dateStr >= startDateStr && dateStr <= endDateStr;
+        });
+
         filledLogs.push({
           log_id: -1, // Temporary ID for absent entries
           user_id: logs[0]?.user_id || 0,
@@ -95,6 +131,9 @@ function fillMissingWorkDays(logs: AttendanceLog[], changeRequests: AttendanceCh
           image_time_out: null,
           has_pending_change_request: !!pendingReq,
           pending_change_request: pendingReq || undefined,
+          is_on_leave: !!leave && leave.status === 'approved',
+          is_pending_leave: !!leave && leave.status === 'pending',
+          leave_details: leave || undefined,
         });
       }
     }
@@ -119,7 +158,7 @@ export default function AttendanceReportModule({
   const [openFromPopover, setOpenFromPopover] = useState(false);
   const [openToPopover, setOpenToPopover] = useState(false);
 
-  const { user, attendanceLogs, changeRequests, isLoading, error, refresh } =
+  const { user, attendanceLogs, changeRequests, leaveRequests, isLoading, error, refresh } =
     useAttendanceReport(initialUserId);
 
   const handleRefresh = async () => {
@@ -135,7 +174,7 @@ export default function AttendanceReportModule({
   };
 
   // First, fill in missing work days (Monday-Saturday) as absent
-  const logsWithAbsences = fillMissingWorkDays(attendanceLogs, changeRequests);
+  const logsWithAbsences = fillMissingWorkDays(attendanceLogs, changeRequests, leaveRequests, fromDate, toDate);
 
   // Then apply the date filter on the filled list so even
   // auto-generated "Absent" days are included in the range

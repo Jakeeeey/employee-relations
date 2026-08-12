@@ -20,6 +20,7 @@ function getHeaders() {
 
 async function directusFetch(path: string, options: RequestInit = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    cache: 'no-store',
     ...options,
     headers: {
       ...getHeaders(),
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     const userIdNum = Number(userId);
     console.log(`[Attendance Report] Fetching data for user_id: ${userIdNum}`);
 
-    const [userResponse, attendanceLogsResponse, changeRequestsResponse] = await Promise.all([
+    const [userResponse, attendanceLogsResponse, changeRequestsResponse, leaveRequestsResponse] = await Promise.all([
       directusFetch(`/items/user?filter[user_id][_eq]=${userIdNum}`),
       directusFetch(
         `/items/attendance_log?filter[user_id][_eq]=${userIdNum}&sort=-log_date&limit=-1`
@@ -58,11 +59,20 @@ export async function GET(request: NextRequest) {
       directusFetch(
         `/items/attendance_change_request?filter[user_id][_eq]=${userIdNum}&filter[status][_eq]=pending`
       ).catch(() => ({ data: [] })), // Catch error in case the collection doesn't exist yet
+      directusFetch(
+        `/items/leave_request?filter[user_id][_eq]=${userIdNum}&limit=-1`
+      ).catch(() => ({ data: [] })),
     ]);
 
     const user = userResponse.data?.[0];
     const attendanceLogs = attendanceLogsResponse.data || [];
     const changeRequests = changeRequestsResponse.data || [];
+    const leaveRequests = leaveRequestsResponse.data || [];
+
+    console.log(`[Attendance Report] Fetched ${leaveRequests.length} leave requests.`);
+    if (leaveRequests.length > 0) {
+      console.log(`[Attendance Report] Leave Request 0:`, leaveRequests[0]);
+    }
 
     // Manually fetch junction table files since Directus might not have the alias field configured
     if (changeRequests.length > 0) {
@@ -111,6 +121,7 @@ export async function GET(request: NextRequest) {
         user,
         attendanceLogs,
         changeRequests,
+        leaveRequests,
       },
       { status: 200 }
     );

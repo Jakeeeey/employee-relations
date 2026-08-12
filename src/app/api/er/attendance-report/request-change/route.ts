@@ -17,12 +17,12 @@ function getAuthHeader(): Record<string, string> {
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    
+
     const userId = formData.get("userId");
     const logDate = formData.get("logDate");
     const reason = formData.get("reason");
     const proofs = formData.getAll("proof") as File[];
-    
+
     // Time fields
     const time_in = formData.get("time_in") as string | null;
     const lunch_start = formData.get("lunch_start") as string | null;
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Upload files to Directus if there are any
     const uploadedFileIds: string[] = [];
-    
+
     for (const file of proofs) {
       const fileFormData = new FormData();
       fileFormData.append("file", file);
@@ -80,6 +80,28 @@ export async function POST(request: NextRequest) {
     if (break_start) payload.break_start = break_start;
     if (break_end) payload.break_end = break_end;
     if (time_out) payload.time_out = time_out;
+
+    // Step 1.5: Fetch original attendance log to store "old_" values
+    try {
+      const logResponse = await fetch(
+        `${API_BASE_URL}/items/attendance_log?filter[user_id][_eq]=${userId}&filter[log_date][_eq]=${logDate}`,
+        { headers: getAuthHeader() }
+      );
+      if (logResponse.ok) {
+        const logData = await logResponse.json();
+        const existingLog = logData.data?.[0];
+        if (existingLog) {
+          payload.old_time_in = existingLog.time_in || null;
+          payload.old_lunch_start = existingLog.lunch_start || null;
+          payload.old_lunch_end = existingLog.lunch_end || null;
+          payload.old_break_start = existingLog.break_start || null;
+          payload.old_break_end = existingLog.break_end || null;
+          payload.old_time_out = existingLog.time_out || null;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch existing attendance log for snapshot:", err);
+    }
 
     const recordResponse = await fetch(`${API_BASE_URL}/items/attendance_change_request`, {
       method: "POST",
