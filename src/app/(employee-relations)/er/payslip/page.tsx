@@ -11,7 +11,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/shared/app-sidebar/nav-user";
 
 import { cookies } from "next/headers";
-import { PayslipClient } from "@/components/payslip/PayslipClient";
+import { PayslipClient } from "@/modules/er/payslip/components/PayslipClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

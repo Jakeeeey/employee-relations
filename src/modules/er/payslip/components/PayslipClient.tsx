@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LockKeyhole, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PasswordPromptDialog } from "@/components/payslip/PasswordPromptDialog";
+import { PasswordPromptDialog } from "@/modules/er/payslip/components/PasswordPromptDialog";
 import { buildPayslipsPdf } from "@/modules/er/payslip/utils/payslipPdf";
 import { toast } from "sonner";
 
