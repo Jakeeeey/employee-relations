@@ -34,25 +34,79 @@ async function directusFetch(path: string, options: RequestInit = {}) {
 
 export const taskService = {
   fetchAll: async (userId: string | number): Promise<Task[]> => {
-    const res = await directusFetch(`/items/tasks?filter[user_id][_eq]=${userId}&sort=-created_at`);
-    return res.data;
+    try {
+      // 1. Fetch assigned tasks from junction table
+      const assigneesRes = await directusFetch(`/items/employee_task_assignee?filter[user_id][_eq]=${userId}`);
+      const assignedTaskIds = assigneesRes.data?.map((a: any) => a.task_id) || [];
+      
+      // 2. Fetch tasks where user is the direct owner OR they are assigned
+      let filterQuery = `filter[_or][0][user_id][_eq]=${userId}`;
+      if (assignedTaskIds.length > 0) {
+        filterQuery += `&filter[_or][1][id][_in]=${assignedTaskIds.join(',')}`;
+      }
+      
+      const res = await directusFetch(`/items/employee_task?${filterQuery}&sort=-date_created`);
+      const tasks = res.data || [];
+      
+      if (tasks.length === 0) return [];
+
+      // 3. Fetch assignee counts/list for these tasks to populate `assignees` array
+      const taskIds = tasks.map((t: any) => t.id);
+      const allAssigneesRes = await directusFetch(`/items/employee_task_assignee?filter[task_id][_in]=${taskIds.join(',')}`);
+      const allAssignees = allAssigneesRes.data || [];
+      
+      return tasks.map((task: any) => {
+        const taskAssignees = allAssignees.filter((a: any) => a.task_id === task.id).map((a: any) => a.user_id);
+        return {
+          ...task,
+          assignees: taskAssignees,
+        };
+      });
+    } catch (error) {
+      console.warn("Failed to fetch assignees (table might not exist yet):", error);
+      // Fallback if table doesn't exist
+      const res = await directusFetch(`/items/employee_task?filter[user_id][_eq]=${userId}&sort=-date_created`);
+      return res.data || [];
+    }
   },
 
   fetchById: async (id: string | number): Promise<Task> => {
-    const res = await directusFetch(`/items/tasks/${id}`);
+    const res = await directusFetch(`/items/employee_task/${id}`);
     return res.data;
   },
 
   create: async (data: CreateTask): Promise<Task> => {
-    const res = await directusFetch(`/items/tasks`, {
+    const { assignees, ...taskData } = data;
+    const res = await directusFetch(`/items/employee_task`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(taskData),
     });
-    return res.data;
+    
+    const newTask = res.data;
+    
+    if (assignees && assignees.length > 0) {
+      try {
+        const assigneePayload = assignees.map(uid => ({
+          task_id: newTask.id,
+          user_id: uid
+        }));
+        
+        await directusFetch(`/items/employee_task_assignee`, {
+          method: 'POST',
+          body: JSON.stringify(assigneePayload),
+        });
+        
+        newTask.assignees = assignees;
+      } catch (e) {
+        console.warn("Failed to insert assignees", e);
+      }
+    }
+    
+    return newTask;
   },
 
   update: async (id: string | number, data: UpdateTask): Promise<Task> => {
-    const res = await directusFetch(`/items/tasks/${id}`, {
+    const res = await directusFetch(`/items/employee_task/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
@@ -60,7 +114,7 @@ export const taskService = {
   },
 
   delete: async (id: string | number): Promise<void> => {
-    await directusFetch(`/items/tasks/${id}`, {
+    await directusFetch(`/items/employee_task/${id}`, {
       method: 'DELETE',
     });
   },

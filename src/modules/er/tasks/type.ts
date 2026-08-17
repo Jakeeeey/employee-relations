@@ -13,9 +13,11 @@ export const TaskSchema = z.object({
   status: TaskStatusSchema,
   priority: TaskPrioritySchema,
   user_id: z.union([z.string(), z.number()]),
-  deadline: z.string().optional(), // ISO date string
-  created_at: z.string().optional(),
-  updated_at: z.string().optional(),
+  start_date: z.string().optional(), // ISO date string
+  end_date: z.string().optional(), // ISO date string
+  date_created: z.string().optional(),
+  date_updated: z.string().optional(),
+  assignees: z.array(z.number()).optional(),
   attachments: z.array(z.any()).optional(), // Placeholder for file references
 });
 
@@ -23,8 +25,8 @@ export type Task = z.infer<typeof TaskSchema>;
 
 export const CreateTaskSchema = TaskSchema.omit({
   id: true,
-  created_at: true,
-  updated_at: true,
+  date_created: true,
+  date_updated: true,
 });
 export type CreateTask = z.infer<typeof CreateTaskSchema>;
 
