@@ -228,7 +228,7 @@ export function TaskBoard({ userId }: { userId: string | number }) {
   
         // 4. Render the week row with absolute positioned event bars
         rows.push(
-          <div className={`grid ${displayDays === 1 ? 'grid-cols-1' : 'grid-cols-7'} relative`} key={weekStart.toString()}>
+          <div className="grid grid-cols-7 relative" key={weekStart.toString()}>
             {days}
             
             {taskRenderData.map(({ task, startIndex, span, slotIndex, tStart, tEnd }) => {
@@ -253,6 +253,13 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                  if (task.priority === "Urgent") colorClass = "bg-rose-500 text-white border-rose-600";
                  else if (task.priority === "High") colorClass = "bg-orange-500 text-white border-orange-600";
               }
+
+              // Override with custom color if available
+              let customStyle: React.CSSProperties = {};
+              if (task.color) {
+                 colorClass = "text-white";
+                 customStyle = { backgroundColor: task.color, borderColor: task.color };
+              }
   
               return (
                 <div 
@@ -261,7 +268,8 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                   style={{
                     left: `calc(${startIndex} * (100% / ${displayDays}) + 6px)`,
                     width: `calc(${span} * (100% / ${displayDays}) - 12px)`,
-                    top: `${topOffset}px`
+                    top: `${topOffset}px`,
+                    ...customStyle
                   }}
                   title={task.title}
                   onClick={() => setEditingTask(task)}
@@ -372,11 +380,18 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                    else if (task.priority === "High") colorClass = "bg-orange-500 border-orange-600";
                 }
 
+                let customStyle = {};
+                if (task.color) {
+                  colorClass = "text-white border-transparent";
+                  customStyle = { backgroundColor: task.color };
+                }
+
                 return (
                   <div 
                     key={task.id} 
                     onClick={() => setEditingTask(task)}
                     className={`text-white text-xs font-semibold px-2 py-1 rounded cursor-pointer hover:opacity-90 truncate shadow-sm border ${colorClass}`}
+                    style={customStyle}
                   >
                     {task.title}
                   </div>
@@ -425,17 +440,23 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                    else if (task.priority === "High") colorClass = "bg-orange-500 border-orange-600";
                 }
 
+                let customStyle: any = {
+                  top: `${top}px`,
+                  height: `${height}px`,
+                  left: `calc(${colIndex} * (100% / ${numColumns}) + 4px)`,
+                  width: `calc(100% / ${numColumns} - 8px)`
+                };
+                if (task.color) {
+                  colorClass = "text-white border-transparent";
+                  customStyle.backgroundColor = task.color;
+                }
+
                 return (
                   <div 
                     key={task.id}
                     onClick={() => setEditingTask(task)}
                     className={`absolute rounded border text-white shadow-sm overflow-hidden p-1.5 cursor-pointer hover:opacity-90 z-10 ${colorClass}`}
-                    style={{
-                      top: `${top}px`,
-                      height: `${height}px`,
-                      left: `calc(${colIndex} * (100% / ${numColumns}) + 4px)`,
-                      width: `calc(100% / ${numColumns} - 8px)`
-                    }}
+                    style={customStyle}
                   >
                     <div className="text-xs font-semibold leading-tight mb-0.5 truncate">{task.title}</div>
                     <div className="text-[10px] opacity-80 leading-tight truncate">
@@ -491,11 +512,17 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                     setDraggedTaskId(null);
                   }}
                   onClick={() => setEditingTask(task)}
-                  className={`bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? "opacity-50" : ""} ${task.end_date && isToday(parseISO(task.end_date)) && task.status !== "Complete" ? "border-blue-400 ring-1 ring-blue-400/20 bg-blue-50/10" : "border-gray-100"}`}
+                  className={`bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? "opacity-50" : ""} border-l-4 ${task.color ? "" : task.end_date && isToday(parseISO(task.end_date)) && task.status !== "Complete" ? "border-l-blue-400 bg-blue-50/10 border border-blue-100" : "border-l-gray-300 border border-gray-100"}`}
+                  style={task.color ? { borderLeftColor: task.color } : {}}
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-900">{task.title}</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                         <h4 className="font-medium text-gray-900">{task.title}</h4>
+                         {task.category && (
+                           <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded uppercase tracking-wider">{task.category}</span>
+                         )}
+                      </div>
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{task.description}</p>
                       
                       {/* Dates */}
@@ -559,7 +586,8 @@ export function TaskBoard({ userId }: { userId: string | number }) {
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-4 font-medium">Task</th>
+              <th className="px-6 py-4 font-medium">Activity</th>
+              <th className="px-6 py-4 font-medium">Category</th>
               <th className="px-6 py-4 font-medium">Status</th>
               <th className="px-6 py-4 font-medium">Priority</th>
               <th className="px-6 py-4 font-medium">Schedule</th>
@@ -581,8 +609,18 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                   className="hover:bg-gray-50 cursor-pointer transition-colors"
                 >
                   <td className="px-6 py-4">
-                    <p className="font-medium text-gray-900">{task.title}</p>
+                    <div className="flex items-center gap-2">
+                      {task.color && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: task.color }}></div>}
+                      <p className="font-medium text-gray-900">{task.title}</p>
+                    </div>
                     {task.description && <p className="text-gray-500 mt-1 line-clamp-1">{task.description}</p>}
+                  </td>
+                  <td className="px-6 py-4">
+                    {task.category && (
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                        {task.category}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -650,7 +688,7 @@ export function TaskBoard({ userId }: { userId: string | number }) {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold tracking-tight">My Tasks</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Schedule of Activities</h2>
         <div className="flex items-center gap-4">
           <div className="flex bg-gray-100 p-1 rounded-lg">
             <button
@@ -683,7 +721,7 @@ export function TaskBoard({ userId }: { userId: string | number }) {
             onClick={() => setIsCreating(true)}
             className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors shadow-sm"
           >
-            <Plus className="w-4 h-4" /> Add Task
+            <Plus className="w-4 h-4" /> Add Activity
           </button>
         </div>
       </div>

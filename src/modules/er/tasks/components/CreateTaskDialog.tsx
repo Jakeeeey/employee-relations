@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { TaskStatus, TaskPriority, CreateTask } from "../type";
+import { TaskStatus, TaskPriority, CreateTask, TaskCategory } from "../type";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -43,6 +43,8 @@ export function CreateTaskDialog({ open, onOpenChange, userId, onSubmit }: Creat
     description: "",
     status: "Pending" as TaskStatus,
     priority: "Medium" as TaskPriority,
+    category: "Task" as TaskCategory,
+    color: "#3b82f6",
     start_date: "",
     end_date: "",
   });
@@ -102,6 +104,8 @@ export function CreateTaskDialog({ open, onOpenChange, userId, onSubmit }: Creat
         description: "",
         status: "Pending",
         priority: "Medium",
+        category: "Task",
+        color: "#3b82f6",
         start_date: "",
         end_date: "",
       });
@@ -115,11 +119,11 @@ export function CreateTaskDialog({ open, onOpenChange, userId, onSubmit }: Creat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
+          <DialogTitle>Create New Activity</DialogTitle>
           <DialogDescription>
-            Add a new task and assign it to multiple people.
+            Add a new activity and assign it to multiple people.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -140,9 +144,40 @@ export function CreateTaskDialog({ open, onOpenChange, userId, onSubmit }: Creat
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Task details..."
+              placeholder="Activity details..."
               rows={3}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <select
+                id="category"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as TaskCategory })}
+              >
+                <option value="Task">Task</option>
+                <option value="Activity">Activity</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="color">Color</Label>
+              <div className="flex h-10 w-full items-center gap-2 rounded-md border border-input bg-background px-3 text-sm ring-offset-background">
+                <input
+                  type="color"
+                  id="color"
+                  className="w-6 h-6 p-0 border-0 bg-transparent rounded cursor-pointer"
+                  value={formData.color}
+                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                />
+                <span className="text-muted-foreground font-mono text-xs uppercase">{formData.color}</span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -240,7 +275,7 @@ export function CreateTaskDialog({ open, onOpenChange, userId, onSubmit }: Creat
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Task"}
+              {isSubmitting ? "Creating..." : "Create Activity"}
             </Button>
           </DialogFooter>
         </form>

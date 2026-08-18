@@ -6,10 +6,15 @@ export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export const TaskPrioritySchema = z.enum(["Low", "Medium", "High", "Urgent"]);
 export type TaskPriority = z.infer<typeof TaskPrioritySchema>;
 
+export const TaskCategorySchema = z.enum(["Task", "Activity", "Meeting", "Other"]);
+export type TaskCategory = z.infer<typeof TaskCategorySchema>;
+
 export const TaskSchema = z.object({
   id: z.union([z.string(), z.number()]),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
+  category: TaskCategorySchema.optional().default("Task"),
+  color: z.string().optional(),
   status: TaskStatusSchema,
   priority: TaskPrioritySchema,
   user_id: z.union([z.string(), z.number()]),
