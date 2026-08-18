@@ -22,10 +22,13 @@ import {
   differenceInCalendarDays
 } from "date-fns";
 import { CreateTaskDialog } from "./CreateTaskDialog";
+import { EditTaskDialog } from "./EditTaskDialog";
+import { Task } from "../type";
 
 export function TaskBoard({ userId }: { userId: string | number }) {
-  const { tasks, holidays, isLoading, error, refresh, updateTask, createTask } = useTasks(userId);
+  const { tasks, holidays, isLoading, error, refresh, updateTask, createTask, deleteTask } = useTasks(userId);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<"board" | "calendar">("board");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [draggedTaskId, setDraggedTaskId] = useState<string | number | null>(null);
@@ -211,6 +214,7 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                     top: `${topOffset}px`
                   }}
                   title={task.title}
+                  onClick={() => setEditingTask(task)}
                 >
                   {task.title}
                 </div>
@@ -296,7 +300,8 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                   onDragEnd={() => {
                     setDraggedTaskId(null);
                   }}
-                  className={`bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? "opacity-50" : ""}`}
+                  onClick={() => setEditingTask(task)}
+                  className={`bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? "opacity-50" : ""} ${task.end_date && isToday(parseISO(task.end_date)) && task.status !== "Complete" ? "border-blue-400 ring-1 ring-blue-400/20 bg-blue-50/10" : "border-gray-100"}`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
@@ -305,11 +310,13 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                       
                       {/* Dates */}
                       {(task.start_date || task.end_date) && (
-                        <div className="flex items-center text-xs text-gray-400 mt-2 gap-1 font-medium">
-                          <CalendarIcon className="w-3 h-3" />
-                          {task.start_date ? format(parseISO(task.start_date), "MMM d") : "No start date"} 
-                          {' → '}
-                          {task.end_date ? format(parseISO(task.end_date), "MMM d") : "No deadline"}
+                        <div className={`flex items-center text-xs mt-3 gap-1.5 font-medium ${task.end_date && isToday(parseISO(task.end_date)) && task.status !== "Complete" ? "text-blue-700" : "text-gray-400"}`}>
+                          <CalendarIcon className="w-3.5 h-3.5" />
+                          <span>{task.start_date ? format(parseISO(task.start_date), "MMM d") : "No start"}</span>
+                          <span className="text-gray-300">→</span>
+                          <span className={task.end_date && isToday(parseISO(task.end_date)) && task.status !== "Complete" ? "bg-blue-600 text-white px-2 py-0.5 rounded-full" : ""}>
+                            {task.end_date ? format(parseISO(task.end_date), "MMM d") : "No deadline"}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -336,7 +343,7 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                     )}
 
                     {/* Simple action buttons to move state */}
-                    <div className="flex gap-1 ml-auto">
+                    <div className="flex gap-1 ml-auto" onClick={(e) => e.stopPropagation()}>
                        {task.status !== "Pending" && (
                          <button onClick={() => handleStatusChange(task.id, "Pending")} className="text-xs text-gray-500 hover:text-black">{'<'} Pending</button>
                        )}
@@ -396,6 +403,14 @@ export function TaskBoard({ userId }: { userId: string | number }) {
         onOpenChange={setIsCreating} 
         userId={userId} 
         onSubmit={createTask} 
+      />
+
+      <EditTaskDialog
+        open={!!editingTask}
+        onOpenChange={(open) => !open && setEditingTask(null)}
+        task={editingTask}
+        onUpdate={updateTask}
+        onDelete={deleteTask}
       />
     </div>
   );
