@@ -28,6 +28,7 @@ export function TaskBoard({ userId }: { userId: string | number }) {
   const [isCreating, setIsCreating] = useState(false);
   const [viewMode, setViewMode] = useState<"board" | "calendar">("board");
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [draggedTaskId, setDraggedTaskId] = useState<string | number | null>(null);
 
   useEffect(() => {
     refresh();
@@ -259,7 +260,20 @@ export function TaskBoard({ userId }: { userId: string | number }) {
   const renderBoard = () => (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
       {columns.map((col) => (
-        <div key={col.status} className={`rounded-xl p-4 ${col.color} border border-gray-200 min-h-[500px]`}>
+        <div 
+          key={col.status} 
+          className={`rounded-xl p-4 ${col.color} border border-gray-200 min-h-[500px] transition-colors`}
+          onDragOver={(e) => {
+            e.preventDefault(); // allow drop
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (draggedTaskId) {
+              handleStatusChange(draggedTaskId, col.status);
+              setDraggedTaskId(null);
+            }
+          }}
+        >
           <div className="flex items-center gap-2 mb-4">
             {col.icon}
             <h3 className="font-semibold text-gray-700">{col.title}</h3>
@@ -273,12 +287,31 @@ export function TaskBoard({ userId }: { userId: string | number }) {
               .map((task) => (
                 <div
                   key={task.id}
-                  className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                  draggable
+                  onDragStart={(e) => {
+                    setDraggedTaskId(task.id);
+                    e.dataTransfer.setData("text/plain", task.id.toString());
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragEnd={() => {
+                    setDraggedTaskId(null);
+                  }}
+                  className={`bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${draggedTaskId === task.id ? "opacity-50" : ""}`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className="font-medium text-gray-900">{task.title}</h4>
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{task.description}</p>
+                      
+                      {/* Dates */}
+                      {(task.start_date || task.end_date) && (
+                        <div className="flex items-center text-xs text-gray-400 mt-2 gap-1 font-medium">
+                          <CalendarIcon className="w-3 h-3" />
+                          {task.start_date ? format(parseISO(task.start_date), "MMM d") : "No start date"} 
+                          {' → '}
+                          {task.end_date ? format(parseISO(task.end_date), "MMM d") : "No deadline"}
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col items-end gap-2 cursor-pointer relative group">
                        <GripVertical className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
