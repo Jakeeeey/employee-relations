@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
-import { Task, CreateTask, UpdateTask } from "../type";
+import { Task, CreateTask, UpdateTask, Holiday } from "../type";
 
 export function useTasks(userId: string | number) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -11,10 +12,19 @@ export function useTasks(userId: string | number) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/er/tasks?userId=${userId}`);
-      if (!response.ok) throw new Error("Failed to fetch tasks");
-      const data = await response.json();
-      setTasks(data);
+      const [tasksRes, holidaysRes] = await Promise.all([
+        fetch(`/api/er/tasks?userId=${userId}`),
+        fetch(`/api/er/holidays`)
+      ]);
+      
+      if (!tasksRes.ok) throw new Error("Failed to fetch tasks");
+      if (!holidaysRes.ok) throw new Error("Failed to fetch holidays");
+      
+      const tasksData = await tasksRes.json();
+      const holidaysData = await holidaysRes.json();
+      
+      setTasks(tasksData);
+      setHolidays(holidaysData);
     } catch (error) {
       const err = error as Error;
       setError(err.message || "An error occurred");
@@ -80,6 +90,7 @@ export function useTasks(userId: string | number) {
 
   return {
     tasks,
+    holidays,
     isLoading,
     error,
     refresh: fetchTasks,

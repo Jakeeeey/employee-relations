@@ -48,3 +48,10 @@ export type RecurringRule = z.infer<typeof RecurringRuleSchema>;
 
 export const CreateRecurringRuleSchema = RecurringRuleSchema.omit({ id: true, last_run: true, next_run: true });
 export type CreateRecurringRule = z.infer<typeof CreateRecurringRuleSchema>;
+
+export interface Holiday {
+  id: number | string;
+  holiday_date: string;
+  description: string;
+  holiday_type: 'regular' | 'special' | 'company';
+}

@@ -16,12 +16,15 @@ import {
   isSameMonth,
   isSameDay,
   isToday,
-  parseISO
+  parseISO,
+  startOfDay,
+  endOfDay,
+  differenceInCalendarDays
 } from "date-fns";
 import { CreateTaskDialog } from "./CreateTaskDialog";
 
 export function TaskBoard({ userId }: { userId: string | number }) {
-  const { tasks, isLoading, error, refresh, updateTask, createTask } = useTasks(userId);
+  const { tasks, holidays, isLoading, error, refresh, updateTask, createTask } = useTasks(userId);
   const [isCreating, setIsCreating] = useState(false);
   const [viewMode, setViewMode] = useState<"board" | "calendar">("board");
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -56,76 +59,167 @@ export function TaskBoard({ userId }: { userId: string | number }) {
     { title: "Complete", status: "Complete", icon: <CheckCircle2 className="w-5 h-5 text-green-500" />, color: "bg-green-50" },
   ];
 
-  const renderCalendar = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
-
-    const dateFormat = "d";
-    const rows = [];
-
-    let days = [];
-    let day = startDate;
-    let formattedDate = "";
-
-    const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-    while (day <= endDate) {
-      for (let i = 0; i < 7; i++) {
-        formattedDate = format(day, dateFormat);
-        const cloneDay = day;
-
-        // Find tasks for this day
-        // Map tasks to their end_date (fallback to start_date or date_created)
-        const dayTasks = tasks.filter(t => {
-           const targetDate = t.end_date ? parseISO(t.end_date) : 
-                              t.start_date ? parseISO(t.start_date) : 
-                              (t.date_created ? parseISO(t.date_created) : null);
-           if (!targetDate) return false;
-           return isSameDay(targetDate, cloneDay);
-        });
-
-        days.push(
-          <div
-            className={`min-h-[120px] p-2 border-r border-b relative ${
-              !isSameMonth(day, monthStart)
-                ? "bg-gray-50 text-gray-400"
-                : isToday(day)
-                ? "bg-blue-50/10"
-                : "bg-white"
-            }`}
-            key={day.toString()}
-          >
-            <div className={`text-sm font-medium mb-1 ${isToday(day) ? 'text-white bg-blue-600 w-6 h-6 rounded-full flex items-center justify-center' : 'text-gray-700 ml-1'}`}>
-              {formattedDate}
+    const renderCalendar = () => {
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(monthStart);
+      const startDate = startOfWeek(monthStart);
+      const endDate = endOfWeek(monthEnd);
+  
+      const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  
+      let day = startDate;
+      const rows = [];
+  
+      while (day <= endDate) {
+        const weekStart = day;
+        const weekEnd = addDays(day, 6);
+  
+        // 1. Render background cells for the week
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+          const currentDay = addDays(weekStart, i);
+          
+          const dayHolidays = holidays?.filter(h => isSameDay(parseISO(h.holiday_date), currentDay)) || [];
+          
+          days.push(
+            <div
+              key={currentDay.toString()}
+              className={`min-h-[120px] p-2 border-r border-b border-gray-100 ${
+                !isSameMonth(currentDay, monthStart)
+                  ? "bg-gray-50/50 text-gray-400"
+                  : dayHolidays.length > 0 
+                  ? "bg-rose-50/30" // Subtle red tint for holidays
+                  : isToday(currentDay)
+                  ? "bg-blue-50/30"
+                  : "bg-white"
+              }`}
+            >
+              <div className={`text-sm font-medium mb-1 ${isToday(currentDay) ? 'text-white bg-blue-600 w-7 h-7 rounded-full flex items-center justify-center shadow-sm' : dayHolidays.length > 0 ? 'text-rose-600 ml-1' : 'text-gray-700 ml-1'}`}>
+                {format(currentDay, "d")}
+              </div>
+              {dayHolidays.map(h => (
+                <div key={h.id} className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-1 px-1 truncate" title={h.description}>
+                  {h.description}
+                </div>
+              ))}
             </div>
-            <div className="space-y-1 mt-1 overflow-y-auto max-h-[85px] no-scrollbar">
-              {dayTasks.map(task => (
+          );
+        }
+  
+        // 2. Find tasks overlapping this week
+        const weekTasks = tasks.filter(t => {
+          const tStart = t.start_date ? startOfDay(parseISO(t.start_date)) : 
+                         t.end_date ? startOfDay(parseISO(t.end_date)) :
+                         (t.date_created ? startOfDay(parseISO(t.date_created)) : null);
+          const tEnd = t.end_date ? endOfDay(parseISO(t.end_date)) : 
+                       t.start_date ? endOfDay(parseISO(t.start_date)) : 
+                       (t.date_created ? endOfDay(parseISO(t.date_created)) : null);
+          
+          if (!tStart || !tEnd) return false;
+          // Overlaps if task start is before week end AND task end is after week start
+          return tStart <= endOfDay(weekEnd) && tEnd >= startOfDay(weekStart);
+        });
+  
+        // Sort tasks by start date, then duration (longer first)
+        weekTasks.sort((a, b) => {
+          const aStart = a.start_date ? parseISO(a.start_date).getTime() : 0;
+          const bStart = b.start_date ? parseISO(b.start_date).getTime() : 0;
+          if (aStart === bStart) {
+             const aEnd = a.end_date ? parseISO(a.end_date).getTime() : aStart;
+             const bEnd = b.end_date ? parseISO(b.end_date).getTime() : bStart;
+             return (bEnd - bStart) - (aEnd - aStart);
+          }
+          return aStart - bStart;
+        });
+  
+        // 3. Assign vertical slots to prevent overlaps within the week row
+        const slots: Array<Array<{start: number, end: number}>> = [];
+        const taskRenderData = weekTasks.map(t => {
+          const tStart = t.start_date ? startOfDay(parseISO(t.start_date)) : 
+                         t.end_date ? startOfDay(parseISO(t.end_date)) :
+                         (t.date_created ? startOfDay(parseISO(t.date_created)) : new Date());
+          const tEnd = t.end_date ? endOfDay(parseISO(t.end_date)) : 
+                       t.start_date ? endOfDay(parseISO(t.start_date)) : 
+                       (t.date_created ? endOfDay(parseISO(t.date_created)) : new Date());
+                       
+          // Clamp to week bounds
+          const visibleStart = tStart < weekStart ? weekStart : tStart;
+          const visibleEnd = tEnd > weekEnd ? weekEnd : tEnd;
+  
+          // Calculate indices (0-6)
+          const startIndex = differenceInCalendarDays(visibleStart, weekStart);
+          const endIndex = differenceInCalendarDays(visibleEnd, weekStart);
+          const span = endIndex - startIndex + 1;
+  
+          // Find the first available vertical slot
+          let slotIndex = 0;
+          while (true) {
+            if (!slots[slotIndex]) slots[slotIndex] = [];
+            let collision = false;
+            for (const occ of slots[slotIndex]) {
+              if (!(startIndex > occ.end || endIndex < occ.start)) {
+                collision = true;
+                break;
+              }
+            }
+            if (!collision) {
+              slots[slotIndex].push({ start: startIndex, end: endIndex });
+              break;
+            }
+            slotIndex++;
+          }
+  
+          return { task: t, startIndex, span, slotIndex, tStart, tEnd };
+        });
+  
+        // 4. Render the week row with absolute positioned event bars
+        rows.push(
+          <div className="grid grid-cols-7 relative" key={weekStart.toString()}>
+            {days}
+            
+            {taskRenderData.map(({ task, startIndex, span, slotIndex, tStart, tEnd }) => {
+              const topOffset = 42 + (slotIndex * 26); // 42px below the day number, 26px height per task
+              
+              // Check if actual dates extend beyond this week to control border radius
+              const isStartRounded = tStart >= weekStart;
+              const isEndRounded = tEnd <= weekEnd;
+  
+              let roundedClass = "rounded-md";
+              if (!isStartRounded && !isEndRounded) roundedClass = "rounded-none";
+              else if (!isStartRounded) roundedClass = "rounded-r-md rounded-l-none border-l-0";
+              else if (!isEndRounded) roundedClass = "rounded-l-md rounded-r-none border-r-0";
+  
+              // Modern solid color bars
+              let colorClass = "bg-slate-700 text-white border-slate-800";
+              if (task.status === "Complete") colorClass = "bg-emerald-500 text-white border-emerald-600";
+              else if (task.status === "In Progress") colorClass = "bg-blue-500 text-white border-blue-600";
+              
+              // Apply urgent/high priority styling if pending
+              if (task.status === "Pending") {
+                 if (task.priority === "Urgent") colorClass = "bg-rose-500 text-white border-rose-600";
+                 else if (task.priority === "High") colorClass = "bg-orange-500 text-white border-orange-600";
+              }
+  
+              return (
                 <div 
                   key={task.id}
-                  className={`text-xs p-1 px-1.5 rounded border truncate shadow-sm cursor-pointer ${
-                    task.status === "Complete" ? "bg-green-100 border-green-200 text-green-800"
-                    : task.status === "In Progress" ? "bg-blue-100 border-blue-200 text-blue-800"
-                    : "bg-gray-100 border-gray-200 text-gray-800"
-                  }`}
+                  className={`absolute h-[22px] px-2 text-xs font-semibold flex items-center shadow-sm truncate border ${colorClass} ${roundedClass} hover:opacity-90 cursor-pointer transition-opacity z-10`}
+                  style={{
+                    left: `calc(${startIndex} * (100% / 7) + 6px)`,
+                    width: `calc(${span} * (100% / 7) - 12px)`,
+                    top: `${topOffset}px`
+                  }}
                   title={task.title}
                 >
                   {task.title}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         );
-        day = addDays(day, 1);
+  
+        day = addDays(day, 7);
       }
-      rows.push(
-        <div className="grid grid-cols-7" key={day.toString()}>
-          {days}
-        </div>
-      );
-      days = [];
-    }
 
     return (
       <div className="mt-6 border-t border-l border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
