@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -441,7 +440,7 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                    else if (task.priority === "High") colorClass = "bg-orange-500 border-orange-600";
                 }
 
-                const customStyle: any = {
+                let customStyle: any = {
                   top: `${top}px`,
                   height: `${height}px`,
                   left: `calc(${colIndex} * (100% / ${numColumns}) + 4px)`,
@@ -749,5 +748,3 @@ export function TaskBoard({ userId }: { userId: string | number }) {
     </div>
   );
 }
-
-
