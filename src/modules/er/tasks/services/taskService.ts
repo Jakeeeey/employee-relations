@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Task, CreateTask, UpdateTask, RecurringRule, CreateRecurringRule } from "../type";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -143,3 +144,5 @@ export const schedulingService = {
     return res.data;
   }
 };
+
+
