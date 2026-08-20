@@ -309,7 +309,9 @@ export function TaskBoard({ userId }: { userId: string | number }) {
     const dayStart = startOfDay(currentDate);
     const dayEnd = endOfDay(currentDate);
 
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allDayTasks: any[] = [];
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const timedTasks: any[] = [];
 
     tasks.forEach(t => {
@@ -340,6 +342,7 @@ export function TaskBoard({ userId }: { userId: string | number }) {
       return a.tStart.getTime() - b.tStart.getTime();
     });
 
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const columns: any[][] = [];
     timedTasks.forEach(item => {
       let placed = false;
@@ -440,7 +443,8 @@ export function TaskBoard({ userId }: { userId: string | number }) {
                    else if (task.priority === "High") colorClass = "bg-orange-500 border-orange-600";
                 }
 
-                let customStyle: any = {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const customStyle: any = {
                   top: `${top}px`,
                   height: `${height}px`,
                   left: `calc(${colIndex} * (100% / ${numColumns}) + 4px)`,

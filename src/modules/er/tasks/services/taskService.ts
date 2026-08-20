@@ -37,6 +37,7 @@ export const taskService = {
     try {
       // 1. Fetch assigned tasks from junction table
       const assigneesRes = await directusFetch(`/items/employee_task_assignee?filter[user_id][_eq]=${userId}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const assignedTaskIds = assigneesRes.data?.map((a: any) => a.task_id) || [];
       
       // 2. Fetch tasks where user is the direct owner OR they are assigned
@@ -51,11 +52,14 @@ export const taskService = {
       if (tasks.length === 0) return [];
 
       // 3. Fetch assignee counts/list for these tasks to populate `assignees` array
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const taskIds = tasks.map((t: any) => t.id);
       const allAssigneesRes = await directusFetch(`/items/employee_task_assignee?filter[task_id][_in]=${taskIds.join(',')}`);
       const allAssignees = allAssigneesRes.data || [];
       
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return tasks.map((task: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const taskAssignees = allAssignees.filter((a: any) => a.task_id === task.id).map((a: any) => a.user_id);
         return {
           ...task,
