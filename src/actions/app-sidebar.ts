@@ -135,20 +135,6 @@ export async function getSidebarNavigation(subsystemSlug: string): Promise<NavIt
 
         if (modulesToProcess.length === 0) return [];
 
-        // FALLBACK: Inject the newly created Travel Request module manually
-        // so it appears in the sidebar without requiring manual Directus configuration.
-        modulesToProcess.push({
-            moduleId: 9999, // Dummy ID
-            title: "Travel Request",
-            url: "/er/travel-request",
-            slug: "travel-request",
-            status: "active",
-            iconName: "Plane",
-            sort: 100, // Put it at the bottom
-            parentModuleId: null,
-            items: []
-        });
-
         const modulesById: Record<number, TempNavItem> = {};
         const roots: TempNavItem[] = [];
 
