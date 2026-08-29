@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const userIdNum = Number(userId);
     console.log(`[Attendance Report] Fetching data for user_id: ${userIdNum}`);
 
-    const [userResponse, attendanceLogsResponse, changeRequestsResponse, leaveRequestsResponse] = await Promise.all([
+    const [userResponse, attendanceLogsResponse, changeRequestsResponse, leaveRequestsResponse, undertimeRequestsResponse] = await Promise.all([
       directusFetch(`/items/user?filter[user_id][_eq]=${userIdNum}`),
       directusFetch(
         `/items/attendance_log?filter[user_id][_eq]=${userIdNum}&sort=-log_date&limit=-1`
@@ -62,12 +62,16 @@ export async function GET(request: NextRequest) {
       directusFetch(
         `/items/leave_request?filter[user_id][_eq]=${userIdNum}&limit=-1`
       ).catch(() => ({ data: [] })),
+      directusFetch(
+        `/items/undertime_request?filter[user_id][_eq]=${userIdNum}&limit=-1`
+      ).catch(() => ({ data: [] })),
     ]);
 
     const user = userResponse.data?.[0];
     const attendanceLogs = attendanceLogsResponse.data || [];
     const changeRequests = changeRequestsResponse.data || [];
     const leaveRequests = leaveRequestsResponse.data || [];
+    const undertimeRequests = undertimeRequestsResponse.data || [];
 
     console.log(`[Attendance Report] Fetched ${leaveRequests.length} leave requests.`);
     if (leaveRequests.length > 0) {
@@ -122,6 +126,7 @@ export async function GET(request: NextRequest) {
         attendanceLogs,
         changeRequests,
         leaveRequests,
+        undertimeRequests,
       },
       { status: 200 }
     );

@@ -22,6 +22,8 @@ export const AttendanceLogSchema = z.object({
   is_on_leave: z.boolean().optional(),
   is_pending_leave: z.boolean().optional(),
   leave_details: z.any().optional(),
+  is_undertime: z.boolean().optional(),
+  undertime_details: z.any().optional(),
 });
 
 export type AttendanceLog = z.infer<typeof AttendanceLogSchema>;
@@ -75,9 +77,22 @@ export interface LeaveRequest {
   [key: string]: unknown;
 }
 
+export interface UndertimeRequest {
+  undertime_id: number;
+  user_id: number;
+  request_date: string;
+  sched_timeout: string;
+  actual_timeout: string;
+  duration_minutes: number;
+  reason: string;
+  status: string;
+  [key: string]: unknown;
+}
+
 export interface AttendanceReportData {
   user: User;
   attendanceLogs: AttendanceLog[];
   changeRequests?: AttendanceChangeRequest[];
   leaveRequests?: LeaveRequest[];
+  undertimeRequests?: UndertimeRequest[];
 }

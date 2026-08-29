@@ -93,7 +93,22 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
     {
       accessorKey: "time_out",
       header: "Time Out",
-      cell: ({ row }) => <span className="font-medium text-slate-700 dark:text-slate-300">{formatDateTime(row.getValue("time_out") as string, "hh:mm a")}</span>,
+      cell: ({ row }) => {
+        const val = row.getValue("time_out") as string;
+        const timeOutStr = formatDateTime(val, "hh:mm a");
+        const isUndertime = row.original.is_undertime;
+        
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-slate-700 dark:text-slate-300">{timeOutStr}</span>
+            {isUndertime && (
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
+                Undertime
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "actions",
