@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit } from "lucide-react";
+import { MoreHorizontal, Edit, AlertCircle, Clock, Palmtree, UserX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { RequestChangeDialog } from "./RequestChangeDialog";
 import { ViewChangeRequestDialog } from "./ViewChangeRequestDialog";
+import { cn } from "@/lib/utils";
 
 interface AttendanceReportTableProps {
   data: AttendanceLog[];
@@ -44,6 +45,7 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AttendanceLog | null>(null);
+  
   const columns: ColumnDef<AttendanceLog>[] = [
     {
       accessorKey: "log_date",
@@ -53,9 +55,9 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
         const hasPending = row.original.has_pending_change_request;
         return (
           <div className="flex items-center gap-2">
-            <span>{dateStr}</span>
+            <span className="font-medium">{dateStr}</span>
             {hasPending && (
-              <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
                 Change Pending
               </Badge>
             )}
@@ -66,32 +68,32 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
     {
       accessorKey: "time_in",
       header: "Time In",
-      cell: ({ row }) => formatDateTime(row.getValue("time_in") as string, "hh:mm a"),
+      cell: ({ row }) => <span className="font-medium text-slate-700 dark:text-slate-300">{formatDateTime(row.getValue("time_in") as string, "hh:mm a")}</span>,
     },
     {
       accessorKey: "lunch_start",
       header: "Lunch Start",
-      cell: ({ row }) => formatDateTime(row.getValue("lunch_start") as string, "hh:mm a"),
+      cell: ({ row }) => <span className="text-muted-foreground">{formatDateTime(row.getValue("lunch_start") as string, "hh:mm a")}</span>,
     },
     {
       accessorKey: "lunch_end",
       header: "Lunch End",
-      cell: ({ row }) => formatDateTime(row.getValue("lunch_end") as string, "hh:mm a"),
+      cell: ({ row }) => <span className="text-muted-foreground">{formatDateTime(row.getValue("lunch_end") as string, "hh:mm a")}</span>,
     },
     {
       accessorKey: "break_start",
       header: "Break Start",
-      cell: ({ row }) => formatDateTime(row.getValue("break_start") as string, "hh:mm a"),
+      cell: ({ row }) => <span className="text-muted-foreground">{formatDateTime(row.getValue("break_start") as string, "hh:mm a")}</span>,
     },
     {
       accessorKey: "break_end",
       header: "Break End",
-      cell: ({ row }) => formatDateTime(row.getValue("break_end") as string, "hh:mm a"),
+      cell: ({ row }) => <span className="text-muted-foreground">{formatDateTime(row.getValue("break_end") as string, "hh:mm a")}</span>,
     },
     {
       accessorKey: "time_out",
       header: "Time Out",
-      cell: ({ row }) => formatDateTime(row.getValue("time_out") as string, "hh:mm a"),
+      cell: ({ row }) => <span className="font-medium text-slate-700 dark:text-slate-300">{formatDateTime(row.getValue("time_out") as string, "hh:mm a")}</span>,
     },
     {
       id: "actions",
@@ -99,13 +101,14 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-48 shadow-lg rounded-xl">
               <DropdownMenuItem
+                className="cursor-pointer py-2.5 rounded-lg"
                 onClick={() => {
                   setSelectedLog(row.original);
                   if (row.original.has_pending_change_request) {
@@ -115,8 +118,8 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
                   }
                 }}
               >
-                <Edit className="mr-2 h-4 w-4" />
-                {row.original.has_pending_change_request ? "View Pending Request" : "Request Change"}
+                <Edit className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span>{row.original.has_pending_change_request ? "View Pending Request" : "Request Change"}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -134,7 +137,7 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
 
   return (
     <div
-      className="[&_table]:border-collapse [&_tbody_tr]:h-8 [&_tbody_tr:last-child]:border-b [&_tbody_td]:px-2 [&_tbody_td]:py-0 [&_tbody_td]:h-8"
+      className="[&_table]:border-collapse [&_tbody_tr]:h-[3.25rem] [&_tbody_tr:last-child]:border-0 [&_tbody_td]:px-4 [&_tbody_td]:py-2"
       data-slot="attendance-table"
     >
       <div className="w-full">
@@ -143,12 +146,12 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
-                className="bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 border-b border-slate-200 dark:border-slate-700"
+                className="bg-slate-50/50 dark:bg-slate-800/20 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 border-b border-border/50"
               >
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="h-10 text-xs font-bold text-muted-foreground uppercase tracking-wider"
+                    className="h-11 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                   >
                     {header.isPlaceholder
                       ? null
@@ -169,47 +172,55 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
                   <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className={`${
+                      className={cn(
+                        "border-b border-border/50 transition-colors",
                         isAbsent && isLeave
-                          ? "bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/40 dark:hover:bg-blue-900/50"
+                          ? "bg-sky-50/50 hover:bg-sky-100/50 dark:bg-sky-950/10 dark:hover:bg-sky-950/20"
                           : isAbsent && isPendingLeave
-                            ? "bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/40 dark:hover:bg-orange-900/50"
+                            ? "bg-amber-50/50 hover:bg-amber-100/50 dark:bg-amber-950/10 dark:hover:bg-amber-950/20"
                             : isAbsent 
-                              ? "bg-red-200 hover:bg-red-300 dark:bg-red-900/50 dark:hover:bg-red-900/60" 
-                              : isLeave
-                                ? "bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
-                                : isPendingLeave
-                                  ? "bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30"
-                                  : "hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
-                      } data-[state=selected]:bg-slate-50 dark:data-[state=selected]:bg-slate-800/30 border-b border-slate-200 dark:border-slate-700`}
+                              ? "bg-rose-50/50 hover:bg-rose-100/50 dark:bg-rose-950/10 dark:hover:bg-rose-950/20" 
+                              : "hover:bg-muted/30"
+                      )}
                     >
                     {isAbsent ? (
                       <>
-                        <TableCell className="py-2">
+                        <TableCell>
                           {flexRender(row.getVisibleCells()[0].column.columnDef.cell, row.getVisibleCells()[0].getContext())}
                         </TableCell>
-                        <TableCell className="py-2"></TableCell>
-                        <TableCell className="py-2"></TableCell>
-                        <TableCell className={`py-2 font-medium ${isLeave ? "text-blue-600 dark:text-blue-400" : isPendingLeave ? "text-orange-600 dark:text-orange-400" : "text-red-600 dark:text-red-400"}`}>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className={cn(
+                          "font-medium", 
+                          isLeave ? "text-sky-600 dark:text-sky-400" : 
+                          isPendingLeave ? "text-amber-600 dark:text-amber-500" : 
+                          "text-rose-600 dark:text-rose-500"
+                        )}>
                           <div className="flex items-center gap-2">
-                            <span>{isLeave ? "Leave" : isPendingLeave ? "Absent (Pending Leave)" : "Absent"}</span>
+                            {isLeave ? <Palmtree className="h-4 w-4" /> : isPendingLeave ? <Clock className="h-4 w-4" /> : <UserX className="h-4 w-4" />}
+                            <span>{isLeave ? "On Leave" : isPendingLeave ? "Leave Pending" : "Absent"}</span>
                             {(isLeave || isPendingLeave) && row.original.leave_details && (
-                              <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${row.original.leave_details.is_paid ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800" : "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/30 dark:text-slate-400 dark:border-slate-700"}`}>
+                              <Badge variant="outline" className={cn(
+                                "text-[10px] h-5 px-1.5 ml-2 border",
+                                row.original.leave_details.is_paid 
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800" 
+                                  : "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/30 dark:text-slate-400 dark:border-slate-700"
+                              )}>
                                 {row.original.leave_details.is_paid ? "Paid" : "Unpaid"}
                               </Badge>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="py-2"></TableCell>
-                        <TableCell className="py-2"></TableCell>
-                        <TableCell className="py-2"></TableCell>
-                        <TableCell className="py-2 text-right">
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-right">
                           {flexRender(row.getVisibleCells()[row.getVisibleCells().length - 1].column.columnDef.cell, row.getVisibleCells()[row.getVisibleCells().length - 1].getContext())}
                         </TableCell>
                       </>
                     ) : (
                       row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="py-2">
+                        <TableCell key={cell.id}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))
@@ -221,9 +232,12 @@ export function AttendanceReportTable({ data, userId, onRefresh }: AttendanceRep
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-32 text-center text-muted-foreground"
                 >
-                  No results.
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <AlertCircle className="h-6 w-6 opacity-50" />
+                    <span>No results found.</span>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
