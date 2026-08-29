@@ -53,7 +53,7 @@ export class LeaveService {
       ...item,
       total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,
       department_id: item.department_id ? parseInt(String(item.department_id)) : null,
-      is_paid: item.is_paid === true || item.is_paid === 1 || String(item.is_paid) === "true",
+      is_paid: item.is_paid === true || item.is_paid === 1 || String(item.is_paid).toLowerCase() === "true" || String(item.is_paid) === "1",
     })) as LeaveRequest[];
   }
 
@@ -76,7 +76,7 @@ export class LeaveService {
       ...item,
       total_days: item.total_days ? parseFloat(String(item.total_days)) : 0,
       department_id: item.department_id ? parseInt(String(item.department_id)) : null,
-      is_paid: item.is_paid === true || item.is_paid === 1 || String(item.is_paid) === "true",
+      is_paid: item.is_paid === true || item.is_paid === 1 || String(item.is_paid).toLowerCase() === "true" || String(item.is_paid) === "1",
     })) as LeaveRequest[];
   }
 
@@ -121,7 +121,7 @@ export class LeaveService {
     return {
       ...createdData,
       total_days: createdData.total_days ? parseFloat(createdData.total_days) : 0,
-      is_paid: createdData.is_paid === true || createdData.is_paid === 1 || String(createdData.is_paid) === "true",
+      is_paid: createdData.is_paid === true || createdData.is_paid === 1 || String(createdData.is_paid).toLowerCase() === "true" || String(createdData.is_paid) === "1",
     } as LeaveRequest;
   }
 
@@ -147,7 +147,7 @@ export class LeaveService {
     return {
       ...updatedData,
       total_days: updatedData.total_days ? parseFloat(updatedData.total_days) : 0,
-      is_paid: updatedData.is_paid === true || updatedData.is_paid === 1 || String(updatedData.is_paid) === "true",
+      is_paid: updatedData.is_paid === true || updatedData.is_paid === 1 || String(updatedData.is_paid).toLowerCase() === "true" || String(updatedData.is_paid) === "1",
     } as LeaveRequest;
   }
 }
