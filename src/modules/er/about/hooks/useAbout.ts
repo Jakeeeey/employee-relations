@@ -4,7 +4,7 @@ import { Company, CompanyHandbook } from "../types";
 export function useCompany() {
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState<any>(null);
+  const [isError, setIsError] = useState<unknown>(null);
 
   const fetchCompany = useCallback(async () => {
     setIsLoading(true);
@@ -36,7 +36,7 @@ export function useCompany() {
 export function useHandbooks() {
   const [handbooks, setHandbooks] = useState<CompanyHandbook[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState<any>(null);
+  const [isError, setIsError] = useState<unknown>(null);
 
   const fetchHandbooks = useCallback(async () => {
     setIsLoading(true);

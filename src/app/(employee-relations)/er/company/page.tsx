@@ -1,60 +1,116 @@
-"use client";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { NavUser } from "@/components/shared/app-sidebar/nav-user";
 
-import { useCompany, useHandbooks } from "@/modules/er/about/hooks/useAbout";
-import { CompanyProfile } from "@/modules/er/about/components/CompanyProfile";
-import { HandbookList } from "@/modules/er/about/components/HandbookList";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Building, BookOpen } from "lucide-react";
+import { cookies } from "next/headers";
+import CompanyPageClient from "./company-page-client";
 
-export default function AboutPage() {
-  const { company, isLoading: companyLoading } = useCompany();
-  const { handbooks, isLoading: handbooksLoading } = useHandbooks();
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const COOKIE_NAME = "vos_access_token";
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+
+    const p = parts[1];
+    const b64 = p.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+
+    const json = Buffer.from(padded, "base64").toString("utf8");
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function pickString(obj: Record<string, unknown> | null | undefined, keys: string[]): string {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+function buildHeaderUserFromToken(token: string | null | undefined) {
+  const payload = token ? decodeJwtPayload(token) : null;
+
+  const first = pickString(payload, [
+    "Firstname",
+    "FirstName",
+    "firstName",
+    "firstname",
+    "first_name",
+  ]);
+  const last = pickString(payload, [
+    "LastName",
+    "Lastname",
+    "lastName",
+    "lastname",
+    "last_name",
+  ]);
+  const email = pickString(payload, ["email", "Email"]);
+
+  const name = [first, last].filter(Boolean).join(" ") || email || "User";
+
+  return {
+    name,
+    email: email || "",
+    avatar: "",
+  };
+}
+
+export default async function CompanyPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value ?? null;
+  const headerUser = buildHeaderUserFromToken(token);
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">About Company</h2>
-      </div>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20">
+      <header className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b shadow-sm bg-background sm:h-16 overflow-hidden">
+        <div className="flex h-full min-w-0 items-center gap-2 px-3 sm:px-4 overflow-hidden">
+          <SidebarTrigger className="-ml-1 shrink-0" />
 
-      <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="profile" className="flex items-center gap-2">
-            <Building className="h-4 w-4" />
-            Company Profile
-          </TabsTrigger>
-          <TabsTrigger value="handbook" className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
-            Company Handbook
-          </TabsTrigger>
-        </TabsList>
+          <Separator
+            orientation="vertical"
+            className="hidden sm:block mr-2 data-[orientation=vertical]:h-4 shrink-0"
+          />
 
-        <TabsContent value="profile" className="space-y-4">
-          {companyLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-[400px] w-full" />
-            </div>
-          ) : company ? (
-            <CompanyProfile company={company} />
-          ) : (
-            <div className="flex h-[400px] items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-              Failed to load company profile.
-            </div>
-          )}
-        </TabsContent>
+          <div className="min-w-0 overflow-hidden">
+            <Breadcrumb>
+              <BreadcrumbList className="min-w-0 overflow-hidden">
+                <BreadcrumbItem className="hidden md:block shrink-0">
+                  <BreadcrumbLink href="#">ER</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block shrink-0" />
+                <BreadcrumbItem className="min-w-0 overflow-hidden">
+                  <BreadcrumbPage className="truncate max-w-[56vw] sm:max-w-[60vw] md:max-w-none">
+                    Company
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+        </div>
 
-        <TabsContent value="handbook" className="space-y-4">
-          {handbooksLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          ) : (
-            <HandbookList handbooks={handbooks} />
-          )}
-        </TabsContent>
-      </Tabs>
+        <div className="flex h-full items-center px-2 sm:px-4 shrink-0 max-w-[48vw] sm:max-w-none overflow-hidden">
+          <NavUser user={headerUser} />
+        </div>
+      </header>
+
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <CompanyPageClient />
+      </main>
     </div>
   );
 }
