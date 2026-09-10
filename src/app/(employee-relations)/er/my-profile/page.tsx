@@ -80,11 +80,13 @@ export default async function Page() {
     
     // Fetch profile data
     let profileData = null;
+    let employeeFiles = [];
     if (token) {
         const payload = decodeJwtPayload(token);
         const userId = payload?.id || payload?.user_id || payload?.sub;
         if (userId) {
             profileData = await ProfileService.getProfile(Number(userId));
+            employeeFiles = await ProfileService.getEmployeeFiles(Number(userId));
         }
     }
 
@@ -126,7 +128,7 @@ export default async function Page() {
             {/* ✅ Only content scrolls inside RIGHT column */}
             <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
                 {profileData ? (
-                    <ProfileModule profile={profileData} />
+                    <ProfileModule profile={profileData} files={employeeFiles} />
                 ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground">
                         <p>Could not load profile data. Please try again later.</p>
