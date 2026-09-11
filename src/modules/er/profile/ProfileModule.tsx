@@ -1,6 +1,6 @@
 "use client";
 
-import { UserProfile } from "./types";
+import { UserProfile, EmployeeFileRecord } from "./types";
 import {
   Card,
   CardContent,
@@ -22,14 +22,18 @@ import {
   CreditCard,
   Heart,
   Droplet,
-  Users
+  Users,
+  FileText,
+  Download
 } from "lucide-react";
+import Link from "next/link";
 
 interface ProfileModuleProps {
   profile: UserProfile;
+  files?: EmployeeFileRecord[];
 }
 
-export function ProfileModule({ profile }: ProfileModuleProps) {
+export function ProfileModule({ profile, files = [] }: ProfileModuleProps) {
   const fullName = [profile.user_fname, profile.user_mname, profile.user_lname, profile.suffix_name]
     .filter(Boolean)
     .join(" ");
@@ -75,11 +79,12 @@ export function ProfileModule({ profile }: ProfileModuleProps) {
 
       {/* Profile Details */}
       <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid w-full sm:w-auto grid-cols-2 lg:grid-cols-4 bg-muted/50 p-1 rounded-xl">
+        <TabsList className="grid w-full sm:w-auto grid-cols-2 lg:grid-cols-5 bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="personal" className="rounded-lg">Personal</TabsTrigger>
           <TabsTrigger value="employment" className="rounded-lg">Employment</TabsTrigger>
           <TabsTrigger value="government" className="rounded-lg">Gov. IDs</TabsTrigger>
           <TabsTrigger value="emergency" className="rounded-lg">Emergency</TabsTrigger>
+          <TabsTrigger value="201files" className="rounded-lg">201 Files</TabsTrigger>
         </TabsList>
         
         <div className="mt-6">
@@ -154,6 +159,71 @@ export function ProfileModule({ profile }: ProfileModuleProps) {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoItem icon={<Users className="w-4 h-4" />} label="Contact Name" value={profile.emergency_contact_name} />
                 <InfoItem icon={<Phone className="w-4 h-4" />} label="Contact Number" value={profile.emergency_contact_number} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="201files" className="focus-visible:outline-none focus-visible:ring-0">
+            <Card className="shadow-sm border-muted">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  201 Files
+                </CardTitle>
+                <CardDescription>
+                  Your employee file records and documents.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {files && files.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {files.map((file) => {
+                      // resolve list names and record types if expanded
+                      let listName = "Record";
+                      if (file.list_id && typeof file.list_id === 'object') {
+                        listName = file.list_id.name || listName;
+                      }
+
+                      return (
+                        <div key={file.id} className="flex items-start p-4 border rounded-xl hover:bg-muted/30 transition-colors bg-card shadow-sm gap-4">
+                          <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                            <FileText className="w-6 h-6 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <p className="text-sm font-semibold truncate" title={file.record_name}>
+                              {file.record_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate" title={listName}>
+                              {listName}
+                            </p>
+                            {file.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                                {file.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="shrink-0 flex items-center justify-center">
+                            {file.file_ref && (
+                              <Link 
+                                href={`${process.env.NEXT_PUBLIC_API_BASE_URL}/assets/${file.file_ref}?download`} 
+                                target="_blank" 
+                                className="p-2 rounded-full hover:bg-primary/10 hover:text-primary transition-colors inline-flex"
+                                title="Download File"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
+                    <FileText className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">No files uploaded yet.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

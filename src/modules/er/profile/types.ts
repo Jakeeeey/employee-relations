@@ -37,3 +37,27 @@ export interface UserProfile {
   department_name?: string | null;
   employment_status_name?: string | null;
 }
+
+export interface EmployeeFileRecordType {
+  id: number;
+  name: string;
+  description?: string | null;
+}
+
+export interface EmployeeFileRecordList {
+  id: number;
+  record_type_id: EmployeeFileRecordType | number;
+  name: string;
+  description?: string | null;
+}
+
+export interface EmployeeFileRecord {
+  id: number;
+  user_id: number;
+  list_id: EmployeeFileRecordList;
+  record_name: string;
+  description?: string | null;
+  file_ref: string;
+  is_deleted: boolean | number;
+  created_at: string;
+}

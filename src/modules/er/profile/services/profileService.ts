@@ -68,4 +68,30 @@ export class ProfileService {
       return null;
     }
   }
+
+  static async getEmployeeFiles(userId: number) {
+    try {
+      // We assume Directus auto-generated these endpoints based on MySQL schema
+      // `employee_file_records`, `employee_file_record_type`, `employee_file_record_list`
+      const res = await fetch(
+        `${API_BASE_URL}/items/employee_file_records?filter[user_id][_eq]=${userId}&filter[is_deleted][_eq]=0&fields=*,list_id.*,list_id.record_type_id.*&sort=-created_at`,
+        {
+          method: "GET",
+          headers: this.getHeaders(),
+          cache: "no-store",
+        }
+      );
+
+      if (!res.ok) {
+        console.error(`Failed to fetch employee files: ${res.statusText} (${res.status})`);
+        return [];
+      }
+
+      const payload = await res.json();
+      return payload.data || [];
+    } catch (error) {
+      console.error("Error fetching employee files:", error);
+      return [];
+    }
+  }
 }
