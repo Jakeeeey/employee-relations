@@ -12,10 +12,16 @@ import {
 import { loadEquipmentCatalog } from "@/modules/er/employee-portal/server/equipment/equipmentItemIo";
 import { findCatalogItem } from "@/modules/er/employee-portal/server/equipment/equipmentCatalog";
 import {
+  buildEquipmentItemStates,
   equipmentDocRef,
   hireeSigner,
   parseEquipmentDocRef,
 } from "@/modules/er/employee-portal/server/equipment/equipmentPredicate";
+import {
+  completeOnboardingTask,
+  listOnboardingTasks,
+  listOnboardingTaskTemplates,
+} from "@/modules/er/employee-portal/server/onboardingTasks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +49,52 @@ function ackPrefix(userId: number): string {
 
 function issuePrefix(userId: number): string {
   return `equipment:issue:${userId}:`;
+}
+
+async function syncEquipmentAcknowledgedTask(userId: number): Promise<void> {
+  try {
+    const [catalog, templates, tasks] = await Promise.all([
+      loadEquipmentCatalog(),
+      listOnboardingTaskTemplates(),
+      listOnboardingTasks({ userId }),
+    ]);
+    const template =
+      templates.find(
+        (t) =>
+          t.phase === "equipment" &&
+          t.code === "equipment_acknowledged" &&
+          t.is_active === true
+      ) ?? null;
+    if (!template) return;
+    const task = tasks.find((t) => t.template_id === template.id) ?? null;
+    if (!task || task.status === "done") return;
+    const [issues, acks] = await Promise.all([
+      dFetch(
+        `/items/acknowledgement_logs?filter[doc_ref][_contains]=${encodeURIComponent(issuePrefix(userId))}&fields=doc_ref&limit=100`
+      ) as Promise<{ data?: AckLogRow[] }>,
+      dFetch(
+        `/items/acknowledgement_logs?filter[doc_ref][_contains]=${encodeURIComponent(ackPrefix(userId))}&fields=doc_ref&limit=100`
+      ) as Promise<{ data?: AckLogRow[] }>,
+    ]);
+    const docRefs = [
+      ...(Array.isArray(issues?.data) ? issues.data : []),
+      ...(Array.isArray(acks?.data) ? acks.data : []),
+    ].map((row) => row.doc_ref);
+    const states = buildEquipmentItemStates(
+      userId,
+      catalog.map((entry) => ({ key: entry.key, required: entry.required })),
+      docRefs
+    );
+    const required = states.filter((s) => s.required);
+    if (required.length > 0 && required.every((s) => s.acked)) {
+      await completeOnboardingTask({ taskId: task.id, completedBy: userId });
+    }
+  } catch (error) {
+    console.error(
+      "[onboarding-portal-equipment] acknowledged-task sync failed:",
+      error
+    );
+  }
 }
 
 async function findRows(docRef: string, signer?: string): Promise<AckLogRow[]> {
@@ -234,6 +286,8 @@ export async function POST(req: NextRequest) {
       }
       throw error;
     }
+
+    await syncEquipmentAcknowledgedTask(userId);
 
     return NextResponse.json(
       { success: true, data: created?.data ?? null },
