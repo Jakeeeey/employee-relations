@@ -107,6 +107,7 @@ export default function LeaveModule({ userId, departmentId }: LeaveModuleProps) 
             initialData={editingLeave || undefined}
             onSubmit={onSubmit}
             isLoading={isLoading}
+            userId={userId}
           />
         </DialogContent>
       </Dialog>
@@ -138,6 +139,10 @@ export default function LeaveModule({ userId, departmentId }: LeaveModuleProps) 
                 <div>
                   <p className="font-semibold text-muted-foreground">Total Days</p>
                   <p>{viewingLeave.total_days} Day(s)</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-muted-foreground">Payment Type</p>
+                  <p>{viewingLeave.is_paid ? "Paid" : "Unpaid"}</p>
                 </div>
               </div>
               <div className="space-y-1">

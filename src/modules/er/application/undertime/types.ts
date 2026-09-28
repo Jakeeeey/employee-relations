@@ -14,13 +14,16 @@ export const UndertimeRequestSchema = z.object({
   duration_minutes: z.number(),
   reason: z.string().min(1, "Reason is required"),
   remarks: z.string().nullable().optional(),
+  override_attachment_uuid: z.string().nullable().optional(),
   status: UndertimeStatusEnum.default("pending"),
+  current_approval_level: z.number().default(1).optional(),
   approver_id: z.number().nullable().optional(),
   approved_at: z.string().nullable().optional(),
   filed_at: z.string().optional(),
   created_by: z.number().nullable().optional(),
   updated_at: z.string().nullable().optional(),
   updated_by: z.number().nullable().optional(),
+  emp_attatchment_uuid: z.string().nullable().optional(),
 });
 
 export type UndertimeRequest = z.infer<typeof UndertimeRequestSchema>;

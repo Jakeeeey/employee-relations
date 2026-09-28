@@ -17,6 +17,13 @@ export const AttendanceLogSchema = z.object({
   image_time_out: z.string().nullable(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
+  has_pending_change_request: z.boolean().optional(),
+  pending_change_request: z.any().optional(),
+  is_on_leave: z.boolean().optional(),
+  is_pending_leave: z.boolean().optional(),
+  leave_details: z.any().optional(),
+  is_undertime: z.boolean().optional(),
+  undertime_details: z.any().optional(),
 });
 
 export type AttendanceLog = z.infer<typeof AttendanceLogSchema>;
@@ -38,7 +45,54 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
+export interface AttendanceChangeRequestFile {
+  id?: number;
+  attendance_change_request_id?: number;
+  directus_files_id?: string | { id: string; filename_download?: string };
+}
+
+export interface AttendanceChangeRequest {
+  id: number;
+  user_id: number;
+  log_date: string;
+  reason: string;
+  status: string;
+  time_in?: string;
+  lunch_start?: string;
+  lunch_end?: string;
+  break_start?: string;
+  break_end?: string;
+  time_out?: string;
+  attendance_change_request_files?: AttendanceChangeRequestFile[];
+}
+
+export interface LeaveRequest {
+  leave_id: number;
+  user_id: number;
+  leave_type: string;
+  leave_start: string;
+  leave_end: string;
+  status: string;
+  is_paid?: number | boolean;
+  [key: string]: unknown;
+}
+
+export interface UndertimeRequest {
+  undertime_id: number;
+  user_id: number;
+  request_date: string;
+  sched_timeout: string;
+  actual_timeout: string;
+  duration_minutes: number;
+  reason: string;
+  status: string;
+  [key: string]: unknown;
+}
+
 export interface AttendanceReportData {
   user: User;
   attendanceLogs: AttendanceLog[];
+  changeRequests?: AttendanceChangeRequest[];
+  leaveRequests?: LeaveRequest[];
+  undertimeRequests?: UndertimeRequest[];
 }

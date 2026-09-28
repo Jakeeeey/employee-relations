@@ -12,8 +12,8 @@ export function useUndertime(userId?: number) {
     setError(null);
     try {
       const url = userId 
-        ? `/api/employee-relations/application/undertime?userId=${userId}`
-        : "/api/employee-relations/application/undertime";
+        ? `/api/er/application/undertime?userId=${userId}`
+        : "/api/er/application/undertime";
         
       const res = await fetch(url);
       const data = await res.json();
@@ -35,7 +35,7 @@ export function useUndertime(userId?: number) {
   const createRequest = async (data: CreateUndertimeInput) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/employee-relations/application/undertime", {
+      const res = await fetch("/api/er/application/undertime", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -58,7 +58,7 @@ export function useUndertime(userId?: number) {
   const updateRequest = async (id: number, data: UpdateUndertimeInput) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/employee-relations/application/undertime/${id}`, {
+      const res = await fetch(`/api/er/application/undertime/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

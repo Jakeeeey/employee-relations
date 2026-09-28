@@ -15,10 +15,13 @@ export const OvertimeRequestSchema = z.object({
   duration_minutes: z.number(),
   purpose: z.string().min(1, "Purpose is required"),
   remarks: z.string().nullable().optional(),
+  override_attachment_uuid: z.string().nullable().optional(),
   status: OvertimeStatusEnum.default("pending"),
+  current_approval_level: z.number().default(1).optional(),
   approver_id: z.number().nullable().optional(),
   approved_at: z.string().nullable().optional(),
   filed_at: z.string().optional(),
+  emp_attatchment_uuid: z.string().nullable().optional(),
 });
 
 export type OvertimeRequest = z.infer<typeof OvertimeRequestSchema>;
