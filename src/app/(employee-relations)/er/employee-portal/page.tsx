@@ -11,8 +11,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/shared/app-sidebar/nav-user";
 
 import { cookies } from "next/headers";
-import { ProfileModule } from "@/modules/er/profile/ProfileModule";
-import { ProfileService } from "@/modules/er/profile/services/profileService";
+
+import { PortalModule } from "@/modules/er/employee-portal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,29 +71,15 @@ function buildHeaderUserFromToken(token: string | null | undefined) {
     };
 }
 
-export default async function Page() {
-    // ✅ Next.js 16: cookies() is async
+export default async function EmployeePortalPage() {
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value ?? null;
 
     const headerUser = buildHeaderUserFromToken(token);
-    
-    // Fetch profile data
-    let profileData = null;
-    let employeeFiles = [];
-    if (token) {
-        const payload = decodeJwtPayload(token);
-        const userId = payload?.id || payload?.user_id || payload?.sub;
-        if (userId) {
-            profileData = await ProfileService.getProfile(Number(userId));
-            employeeFiles = await ProfileService.getEmployeeFiles(Number(userId));
-        }
-    }
 
     return (
-        // ✅ This fills the RIGHT column provided by SidebarInset (which is now fixed-height).
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20">
-            {/* ✅ Topbar is fixed in place because ONLY <main> scrolls */}
+            {/* Topbar is fixed in place because ONLY <main> scrolls */}
             <header className="relative z-10 flex h-14 shrink-0 items-center justify-between border-b shadow-sm bg-background sm:h-16 overflow-hidden">
                 <div className="flex h-full min-w-0 items-center gap-2 px-3 sm:px-4 overflow-hidden">
                     <SidebarTrigger className="-ml-1 shrink-0" />
@@ -112,7 +98,7 @@ export default async function Page() {
                                 <BreadcrumbSeparator className="hidden md:block shrink-0" />
                                 <BreadcrumbItem className="min-w-0 overflow-hidden">
                                     <BreadcrumbPage className="truncate max-w-[56vw] sm:max-w-[60vw] md:max-w-none">
-                                        My Profile
+                                        Employee Portal
                                     </BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
@@ -125,15 +111,9 @@ export default async function Page() {
                 </div>
             </header>
 
-            {/* ✅ Only content scrolls inside RIGHT column */}
-            <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-                {profileData ? (
-                    <ProfileModule profile={profileData} files={employeeFiles} />
-                ) : (
-                    <div className="flex h-full items-center justify-center text-muted-foreground">
-                        <p>Could not load profile data. Please try again later.</p>
-                    </div>
-                )}
+            {/* Only content scrolls inside RIGHT column */}
+            <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+                <PortalModule />
             </main>
         </div>
     );
