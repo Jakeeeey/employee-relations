@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
  
- 
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -9,6 +8,7 @@ import { TravelRequest, TravelRequestFormInput } from "../types/schema";
 
 export function useTravelRequests() {
   const [data, setData] = useState<TravelRequest[]>([]);
+  const [approvalsData, setApprovalsData] = useState<TravelRequest[]>([]);
   const [coas, setCoas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,9 +17,10 @@ export function useTravelRequests() {
     setIsLoading(true);
     setError(null);
     try {
-      const [reqRes, coaRes] = await Promise.all([
+      const [reqRes, approvalsRes, coaRes] = await Promise.all([
         fetch("/api/er/travel-request"),
-        fetch("/api/er/travel-request/coa")
+        fetch("/api/er/travel-request?scope=approvals"),
+        fetch("/api/er/travel-request/coa"),
       ]);
 
       if (!reqRes.ok) {
@@ -28,6 +29,11 @@ export function useTravelRequests() {
       }
       const json = await reqRes.json();
       setData(json.data || []);
+
+      if (approvalsRes.ok) {
+        const approvalsJson = await approvalsRes.json();
+        setApprovalsData(approvalsJson.data || []);
+      }
 
       if (coaRes.ok) {
         const coaJson = await coaRes.json();
@@ -93,7 +99,7 @@ export function useTravelRequests() {
     }
   };
 
-  const updateStatus = async (id: number, status: string) => {
+  const updateStatus = async (id: number, status: string, remarks?: string) => {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/er/travel-request/${id}`, {
@@ -101,7 +107,7 @@ export function useTravelRequests() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, remarks }),
       });
 
       if (!res.ok) {
@@ -109,7 +115,16 @@ export function useTravelRequests() {
         throw new Error(errData.message || "Failed to update travel request status");
       }
 
-      toast.success("Success", { description: "Travel request updated successfully" });
+      const statusMsg =
+        status === "approved"
+          ? "Travel request approved successfully"
+          : status === "rejected"
+          ? "Travel request rejected"
+          : status === "cancelled"
+          ? "Travel request cancelled"
+          : "Travel request updated";
+
+      toast.success("Status Updated", { description: statusMsg });
       await fetchRequests(); // refresh list
     } catch (err: any) {
       toast.error("Error", { description: err.message });
@@ -121,6 +136,7 @@ export function useTravelRequests() {
 
   return {
     data,
+    approvalsData,
     coas,
     isLoading,
     error,
@@ -130,5 +146,3 @@ export function useTravelRequests() {
     updateStatus,
   };
 }
-
-

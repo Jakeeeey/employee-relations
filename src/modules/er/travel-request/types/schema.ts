@@ -30,6 +30,12 @@ export const TravelRequestSchema = z.object({
   filed_at: z.string().optional(),
   total_budget: z.number().optional(),
   budget_items: z.array(TravelRequestBudgetSchema).optional(),
+  employee_name: z.string().optional(),
+  department_name: z.string().optional(),
+  approval_remarks: z.string().nullable().optional(),
+  attachment_filename: z.string().nullable().optional(),
+  attachment_filesize: z.number().nullable().optional(),
+  attachment_filetype: z.string().nullable().optional(),
 });
 
 export type TravelRequest = z.infer<typeof TravelRequestSchema>;
@@ -53,9 +59,10 @@ export const TravelRequestFormInputSchema = z.object({
   message: "At least one budget item is required when budget is needed",
   path: ["budget_items"],
 }).refine((data) => {
+  if (!data.travel_from || !data.travel_to) return true;
   return new Date(data.travel_from) <= new Date(data.travel_to);
 }, {
-  message: "End date must be after or equal to start date",
+  message: "End date cannot be before the start date",
   path: ["travel_to"],
 });
 
