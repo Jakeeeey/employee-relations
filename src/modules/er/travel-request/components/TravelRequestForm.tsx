@@ -582,7 +582,7 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                                     value={selectField.value?.toString() || ""}
                                   >
                                     <FormControl>
-                                      <SelectTrigger className="w-full bg-background h-10 px-3 text-left">
+                                      <SelectTrigger className="w-full bg-background h-10 px-3 text-left [&>span]:truncate [&>span]:block [&>span]:text-left [&>span]:flex-1 [&>span]:min-w-0 overflow-hidden">
                                         <SelectValue placeholder="Select an expense category..." />
                                       </SelectTrigger>
                                     </FormControl>
