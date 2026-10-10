@@ -43,9 +43,9 @@ export function LguLeaveTable({ data, onView, onCancel }: LguLeaveTableProps) {
   const filteredData = React.useMemo(() => {
     return data.filter((item) => {
       const matchesSearch =
-        item.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.leave_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.last_name && item.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.first_name && item.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.leave_type && item.leave_type.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.office_department &&
           item.office_department.toLowerCase().includes(searchTerm.toLowerCase()));
 

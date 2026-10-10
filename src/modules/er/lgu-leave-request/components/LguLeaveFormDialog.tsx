@@ -30,8 +30,13 @@ import {
   Plane,
   Hospital,
   GraduationCap,
+  Briefcase,
+  Building2,
+  Coins,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 
 interface LguLeaveFormDialogProps {
   open: boolean;
@@ -44,7 +49,7 @@ interface LguLeaveFormDialogProps {
     firstName?: string;
     middleName?: string;
     position?: string;
-    salary?: number;
+    salary?: number | null;
     departmentId?: number | null;
   };
 }
@@ -57,20 +62,41 @@ export function LguLeaveFormDialog({
   defaultUserInfo,
 }: LguLeaveFormDialogProps) {
   const [submitting, setSubmitting] = React.useState(false);
+  const [currentUserInfo, setCurrentUserInfo] = React.useState(defaultUserInfo);
 
-  // Form states
-  const [officeDepartment, setOfficeDepartment] = React.useState(
-    defaultUserInfo?.office || "Local Government Unit"
-  );
-  const [lastName, setLastName] = React.useState(defaultUserInfo?.lastName || "");
-  const [firstName, setFirstName] = React.useState(defaultUserInfo?.firstName || "");
-  const [middleName, setMiddleName] = React.useState(defaultUserInfo?.middleName || "");
+  // Sync when defaultUserInfo changes
+  React.useEffect(() => {
+    if (defaultUserInfo) {
+      setCurrentUserInfo(defaultUserInfo);
+    }
+  }, [defaultUserInfo]);
+
+  // If missing detailed user info, auto-fetch from system API
+  React.useEffect(() => {
+    if (open && (!currentUserInfo?.firstName || currentUserInfo?.salary === undefined)) {
+      fetch(`/api/er/lgu-leave-request/user-info?user_id=${userId}`)
+        .then((r) => r.json())
+        .then((res) => {
+          if (res?.data) {
+            const d = res.data;
+            setCurrentUserInfo((prev) => ({
+              office: d.departmentName || prev?.office || "Local Government Unit",
+              firstName: d.firstName || prev?.firstName || "",
+              lastName: d.lastName || prev?.lastName || "",
+              middleName: d.middleName || prev?.middleName || "",
+              position: d.position || prev?.position || "",
+              salary: d.monthlySalary !== null && d.monthlySalary !== undefined ? d.monthlySalary : prev?.salary,
+              departmentId: d.departmentId ?? prev?.departmentId,
+            }));
+          }
+        })
+        .catch((err) => console.warn("Failed to load user info:", err));
+    }
+  }, [open, userId, currentUserInfo]);
+
+  // Section 1-5 Date of Filing
   const [dateOfFiling, setDateOfFiling] = React.useState(
     new Date().toISOString().split("T")[0]
-  );
-  const [position, setPosition] = React.useState(defaultUserInfo?.position || "");
-  const [monthlySalary, setMonthlySalary] = React.useState<string>(
-    defaultUserInfo?.salary ? String(defaultUserInfo.salary) : ""
   );
 
   // 6.A
@@ -136,14 +162,17 @@ export function LguLeaveFormDialog({
 
     const payload: CreateLguLeaveInput = {
       user_id: userId,
-      department_id: defaultUserInfo?.departmentId || null,
-      office_department: officeDepartment,
-      last_name: lastName,
-      first_name: firstName,
-      middle_name: middleName || null,
+      department_id: currentUserInfo?.departmentId || null,
+      office_department: currentUserInfo?.office || "Local Government Unit",
+      last_name: currentUserInfo?.lastName || "",
+      first_name: currentUserInfo?.firstName || "",
+      middle_name: currentUserInfo?.middleName || null,
       date_of_filing: dateOfFiling,
-      position: position || null,
-      monthly_salary: monthlySalary ? parseFloat(monthlySalary) : null,
+      position: currentUserInfo?.position || null,
+      monthly_salary:
+        currentUserInfo?.salary !== null && currentUserInfo?.salary !== undefined
+          ? Number(currentUserInfo.salary)
+          : null,
 
       leave_type: leaveType,
       leave_type_others: leaveType === "others" ? leaveTypeOthers : null,
@@ -197,6 +226,14 @@ export function LguLeaveFormDialog({
     }
   };
 
+  const applicantFullName = [
+    currentUserInfo?.firstName,
+    currentUserInfo?.middleName,
+    currentUserInfo?.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ") || "Employee";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full sm:max-w-4xl lg:max-w-5xl max-h-[90vh] h-[90vh] p-0 flex flex-col overflow-hidden bg-background shadow-2xl">
@@ -224,83 +261,82 @@ export function LguLeaveFormDialog({
         <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto min-h-0 p-6 overscroll-contain">
             <div className="space-y-8 pr-1">
-              {/* SECTION 1-5: APPLICANT DETAILS */}
+              {/* SECTION 1-5: APPLICANT DETAILS (AUTO-RETRIEVED) */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-border/40">
-                  <User className="h-4 w-4 text-primary" />
-                  <h3 className="font-bold text-sm tracking-wide uppercase text-foreground">
-                    1–5. Applicant & Office Identification
-                  </h3>
+                <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <h3 className="font-bold text-sm tracking-wide uppercase text-foreground">
+                      1–5. Applicant & Office Identification
+                    </h3>
+                  </div>
+                  <Badge variant="outline" className="gap-1 text-[11px] font-normal bg-primary/5 text-primary border-primary/20">
+                    <ShieldCheck className="h-3 w-3 text-primary" />
+                    Auto-retrieved from System Profile
+                  </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-semibold">1. Office / Department</Label>
-                    <Input
-                      placeholder="e.g. Office of the Municipal Mayor / HRMO"
-                      value={officeDepartment}
-                      onChange={(e) => setOfficeDepartment(e.target.value)}
-                      required
-                    />
-                  </div>
+                {/* Auto-populated employee info overview */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-4 shadow-2xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Employee Full Name */}
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-primary" /> 2. Applicant Name
+                      </p>
+                      <p className="text-sm font-semibold text-foreground truncate" title={applicantFullName}>
+                        {applicantFullName}
+                      </p>
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">3. Date of Filing</Label>
-                    <Input
-                      type="date"
-                      value={dateOfFiling}
-                      onChange={(e) => setDateOfFiling(e.target.value)}
-                      required
-                    />
-                  </div>
+                    {/* Office / Department */}
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-primary" /> 1. Office / Department
+                      </p>
+                      <p className="text-sm font-semibold text-foreground truncate" title={currentUserInfo?.office || "Local Government Unit"}>
+                        {currentUserInfo?.office || "Local Government Unit"}
+                      </p>
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">5. Monthly Salary (PHP)</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 35000"
-                      value={monthlySalary}
-                      onChange={(e) => setMonthlySalary(e.target.value)}
-                    />
-                  </div>
+                    {/* Position / Title */}
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Briefcase className="w-3.5 h-3.5 text-primary" /> 4. Position / Title
+                      </p>
+                      <p className="text-sm font-semibold text-foreground truncate" title={currentUserInfo?.position || "Not specified"}>
+                        {currentUserInfo?.position || "Not specified"}
+                      </p>
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">2. Last Name</Label>
-                    <Input
-                      placeholder="Dela Cruz"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                    />
+                    {/* Monthly Salary */}
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Coins className="w-3.5 h-3.5 text-primary" /> 5. Monthly Salary
+                      </p>
+                      <p className="text-sm font-semibold text-foreground truncate font-mono">
+                        {currentUserInfo?.salary !== null && currentUserInfo?.salary !== undefined && !isNaN(Number(currentUserInfo.salary))
+                          ? formatCurrency(currentUserInfo.salary)
+                          : "Not available"}
+                      </p>
+                    </div>
                   </div>
+                </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">2. First Name</Label>
-                    <Input
-                      placeholder="Juan"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">2. Middle Name</Label>
-                    <Input
-                      placeholder="Santos"
-                      value={middleName}
-                      onChange={(e) => setMiddleName(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">4. Position / Title</Label>
-                    <Input
-                      placeholder="Administrative Officer IV"
-                      value={position}
-                      onChange={(e) => setPosition(e.target.value)}
-                    />
-                  </div>
+                {/* Date of filing input */}
+                <div className="max-w-xs space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-primary" /> 3. Date of Filing
+                  </Label>
+                  <Input
+                    type="date"
+                    value={dateOfFiling}
+                    onChange={(e) => setDateOfFiling(e.target.value)}
+                    required
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Official date of filing this CSC Form No. 6 application.
+                  </p>
                 </div>
               </div>
 
