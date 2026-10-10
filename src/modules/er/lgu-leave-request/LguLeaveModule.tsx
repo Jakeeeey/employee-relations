@@ -21,7 +21,8 @@ interface LguLeaveModuleProps {
     firstName?: string;
     middleName?: string;
     position?: string;
-    salary?: number;
+    salary?: number | null;
+    departmentId?: number | null;
   };
 }
 

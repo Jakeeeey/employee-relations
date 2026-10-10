@@ -12,6 +12,7 @@ import { NavUser } from "@/components/shared/app-sidebar/nav-user";
 import { cookies } from "next/headers";
 import { decodeJwtPayload, COOKIE_NAME } from "@/lib/auth-utils";
 import { LguLeaveModule } from "@/modules/er/lgu-leave-request/LguLeaveModule";
+import { LguLeaveService } from "@/modules/er/lgu-leave-request/services/lguLeaveService";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -76,11 +77,14 @@ export default async function LguLeaveRequestPage() {
   const userId = pickNumber(payload, ["user_id", "userId", "id", "sub"]) ?? 1;
   const departmentId = pickNumber(payload, ["user_department", "department_id", "departmentId"]);
 
-  const firstName = pickString(payload, ["Firstname", "FirstName", "firstName", "first_name"]);
-  const lastName = pickString(payload, ["LastName", "Lastname", "lastName", "last_name"]);
-  const middleName = pickString(payload, ["MiddleName", "middle_name"]);
-  const position = pickString(payload, ["position", "Position", "job_title"]);
-  const office = pickString(payload, ["office", "department_name", "department"]);
+  // Automatically fetch full employee details (Name, Department, Position, Monthly Salary) from system
+  const empInfo = await LguLeaveService.getEmployeeInfo(userId);
+
+  const firstName = empInfo.firstName || pickString(payload, ["Firstname", "FirstName", "firstName", "first_name"]);
+  const lastName = empInfo.lastName || pickString(payload, ["LastName", "Lastname", "lastName", "last_name"]);
+  const middleName = empInfo.middleName || pickString(payload, ["MiddleName", "middle_name"]);
+  const position = empInfo.position || pickString(payload, ["position", "Position", "job_title"]);
+  const office = empInfo.departmentName || pickString(payload, ["office", "department_name", "department"]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20">
@@ -122,13 +126,15 @@ export default async function LguLeaveRequestPage() {
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <LguLeaveModule
           userId={userId}
-          departmentId={departmentId}
+          departmentId={empInfo.departmentId ?? departmentId}
           userInfo={{
             office: office || "Local Government Unit",
             firstName: firstName || "",
             lastName: lastName || "",
             middleName: middleName || "",
             position: position || "",
+            salary: empInfo.monthlySalary,
+            departmentId: empInfo.departmentId ?? departmentId,
           }}
         />
       </main>
