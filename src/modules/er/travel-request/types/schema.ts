@@ -30,6 +30,12 @@ export const TravelRequestSchema = z.object({
   filed_at: z.string().optional(),
   total_budget: z.number().optional(),
   budget_items: z.array(TravelRequestBudgetSchema).optional(),
+  employee_name: z.string().optional(),
+  department_name: z.string().optional(),
+  approval_remarks: z.string().nullable().optional(),
+  attachment_filename: z.string().nullable().optional(),
+  attachment_filesize: z.number().nullable().optional(),
+  attachment_filetype: z.string().nullable().optional(),
 });
 
 export type TravelRequest = z.infer<typeof TravelRequestSchema>;
