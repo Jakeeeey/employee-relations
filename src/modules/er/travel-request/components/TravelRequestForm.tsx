@@ -78,6 +78,7 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
 
   const form = useForm<TravelRequestFormInput>({
     resolver: zodResolver(TravelRequestFormInputSchema),
+    mode: "onChange",
     defaultValues: {
       travel_from: "",
       travel_to: "",
@@ -95,10 +96,25 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
     control: form.control,
   });
 
+  const travelFrom = useWatch({
+    control: form.control,
+    name: "travel_from",
+  });
+
   const requiresBudget = useWatch({
     control: form.control,
     name: "requires_budget",
   });
+
+  const watchedBudgetItems = useWatch({
+    control: form.control,
+    name: "budget_items",
+  }) || [];
+
+  const totalBudget = (watchedBudgetItems || []).reduce((acc, curr) => {
+    const amt = Number(curr?.amount) || 0;
+    return acc + amt;
+  }, 0);
 
   const handleFileUpload = async (file: File) => {
     const validExtensions = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
@@ -155,6 +171,17 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
   };
 
   const handleFormSubmit = (data: TravelRequestFormInput) => {
+    if (data.travel_from && data.travel_to && new Date(data.travel_from) > new Date(data.travel_to)) {
+      form.setError("travel_to", {
+        type: "manual",
+        message: "End date cannot be before the start date",
+      });
+      toast.error("Invalid Dates", {
+        description: "The travel end date cannot be before the start date.",
+      });
+      return;
+    }
+
     if (isAttachmentRequired && !data.attachment_uuid) {
       setUploadError("Official Communication Letter or Memo is required before submitting.");
       toast.error("Document Required", {
@@ -199,7 +226,21 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
                       <FormControl>
-                        <Input type="date" className="bg-background/50 focus:bg-background transition-colors" {...field} />
+                        <Input
+                          type="date"
+                          className="bg-background/50 focus:bg-background transition-colors"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            const newFrom = e.target.value;
+                            const currentTo = form.getValues("travel_to");
+                            if (currentTo && newFrom && currentTo < newFrom) {
+                              form.setValue("travel_to", newFrom, { shouldValidate: true });
+                            } else {
+                              form.trigger("travel_to");
+                            }
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -213,7 +254,16 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                     <FormItem>
                       <FormLabel>End Date</FormLabel>
                       <FormControl>
-                        <Input type="date" className="bg-background/50 focus:bg-background transition-colors" {...field} />
+                        <Input
+                          type="date"
+                          min={travelFrom || undefined}
+                          className="bg-background/50 focus:bg-background transition-colors"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            form.trigger("travel_to");
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -479,46 +529,74 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                       <p className="text-xs text-muted-foreground mt-1 max-w-[250px]">Click &quot;Add Item&quot; to start breaking down your expenses.</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-border/50">
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="group relative p-6 bg-background transition-all hover:bg-muted/10">
-                          
-                          <div className="flex items-center justify-between mb-4">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-md">
-                              Item {index + 1}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground opacity-50 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all rounded-full"
-                              onClick={() => remove(index)}
-                              disabled={fields.length === 1}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                    <div className="p-6 space-y-4">
+                      {fields.map((field, index) => {
+                        const currentCoaId = form.watch(`budget_items.${index}.coa_id`);
+                        const selectedCoa = coas?.find((c) => c.coa_id === currentCoaId);
+
+                        return (
+                          <div
+                            key={field.id}
+                            className="p-4 rounded-xl border border-border/80 bg-background/80 shadow-2xs space-y-3.5 hover:border-primary/40 transition-colors"
+                          >
+                            <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[11px] font-mono uppercase bg-muted/60">
+                                  Item {index + 1}
+                                </Badge>
+                                {selectedCoa && (
+                                  <span className="text-xs text-muted-foreground truncate max-w-[260px] sm:max-w-md">
+                                    <span className="font-semibold text-foreground/80">{selectedCoa.gl_code}</span> &bull; {selectedCoa.account_title}
+                                  </span>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-full"
+                                onClick={() => remove(index)}
+                                disabled={fields.length === 1}
+                                title={fields.length === 1 ? "At least one item is required" : "Remove item"}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+
+                            {/* Expense Category (Full width to comfortably accommodate long GL accounts) */}
                             <FormField
                               control={form.control}
                               name={`budget_items.${index}.coa_id`}
                               render={({ field: selectField }) => (
-                                <FormItem className="md:col-span-5">
-                                  <FormLabel className="text-xs font-semibold text-muted-foreground">Expense Category</FormLabel>
+                                <FormItem className="w-full space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel className="text-xs font-semibold text-muted-foreground">
+                                      Expense Category
+                                    </FormLabel>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      Chart of Accounts (COA)
+                                    </span>
+                                  </div>
                                   <Select
                                     onValueChange={(value) => selectField.onChange(Number(value))}
                                     value={selectField.value?.toString() || ""}
                                   >
                                     <FormControl>
-                                      <SelectTrigger className="w-full bg-background/50 h-9">
-                                        <SelectValue placeholder="Select category" />
+                                      <SelectTrigger className="w-full bg-background h-10 px-3 text-left">
+                                        <SelectValue placeholder="Select an expense category..." />
                                       </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>
+                                    <SelectContent className="max-h-72">
                                       {coas?.map((coa) => (
-                                        <SelectItem key={coa.coa_id} value={coa.coa_id.toString()}>
-                                          {coa.gl_code} - {coa.account_title}
+                                        <SelectItem key={coa.coa_id} value={coa.coa_id.toString()} className="py-2.5">
+                                          <div className="flex items-center gap-2 text-left">
+                                            <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                                              {coa.gl_code}
+                                            </Badge>
+                                            <span className="text-xs font-medium text-foreground truncate max-w-[340px]">
+                                              {coa.account_title}
+                                            </span>
+                                          </div>
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -528,50 +606,89 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                               )}
                             />
 
-                            <FormField
-                              control={form.control}
-                              name={`budget_items.${index}.amount`}
-                              render={({ field: inputField }) => (
-                                <FormItem className="md:col-span-3">
-                                  <FormLabel className="text-xs font-semibold text-muted-foreground">Amount</FormLabel>
-                                  <FormControl>
-                                    <div className="relative flex items-center">
-                                      <span className="absolute left-2.5 text-muted-foreground text-[13px] font-medium pointer-events-none">₱</span>
-                                      <Input 
-                                        className="pl-7 pr-3 bg-background/50 h-9 font-medium"
-                                        type="number" 
-                                        step="0.01" 
-                                        placeholder="0.00" 
-                                        {...inputField} 
-                                        onChange={(e) => inputField.onChange(parseFloat(e.target.value))}
+                            {/* Amount & Item Details side-by-side */}
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start pt-1">
+                              <FormField
+                                control={form.control}
+                                name={`budget_items.${index}.amount`}
+                                render={({ field: inputField }) => (
+                                  <FormItem className="sm:col-span-5 space-y-1.5">
+                                    <FormLabel className="text-xs font-semibold text-muted-foreground">
+                                      Estimated Amount
+                                    </FormLabel>
+                                    <FormControl>
+                                      <div className="relative flex items-center">
+                                        <span className="absolute left-3 text-muted-foreground text-sm font-semibold pointer-events-none">₱</span>
+                                        <Input
+                                          className="pl-7 pr-3 bg-background h-10 font-semibold text-emerald-600 dark:text-emerald-400 text-sm"
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          placeholder="0.00"
+                                          {...inputField}
+                                          value={inputField.value === 0 && !inputField.value?.toString().includes(".") ? "" : inputField.value ?? ""}
+                                          onFocus={(e) => e.target.select()}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            inputField.onChange(val === "" ? 0 : parseFloat(val) || 0);
+                                          }}
+                                        />
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name={`budget_items.${index}.remarks`}
+                                render={({ field: inputField }) => (
+                                  <FormItem className="sm:col-span-7 space-y-1.5">
+                                    <FormLabel className="text-xs font-semibold text-muted-foreground">
+                                      Item Details / Remarks
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        className="bg-background h-10 text-xs"
+                                        placeholder="e.g. Flight ticket, lodging, fuel, per diem..."
+                                        {...inputField}
+                                        value={inputField.value || ""}
                                       />
-                                    </div>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name={`budget_items.${index}.remarks`}
-                              render={({ field: inputField }) => (
-                                <FormItem className="md:col-span-4">
-                                  <FormLabel className="text-xs font-semibold text-muted-foreground">Item Details</FormLabel>
-                                  <FormControl>
-                                    <Input className="bg-background/50 h-9" placeholder="e.g. Flight, Hotel..." {...inputField} value={inputField.value || ""} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
+
+                  {/* Running Total & Summary Footer */}
+                  {fields.length > 0 && (
+                    <div className="p-4 bg-muted/40 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                          Total Requested Budget
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {fields.length} {fields.length === 1 ? "expense item" : "expense items"} planned
+                        </span>
+                      </div>
+                      <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {new Intl.NumberFormat("en-PH", {
+                          style: "currency",
+                          currency: "PHP",
+                        }).format(totalBudget)}
+                      </div>
+                    </div>
+                  )}
+
                   {form.formState.errors.budget_items?.root && (
-                    <p className="text-sm font-medium text-destructive mt-2 flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-destructive p-4 pt-0 flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-destructive inline-block"></span>
                       {form.formState.errors.budget_items.root.message}
                     </p>
