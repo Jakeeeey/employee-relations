@@ -54,7 +54,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ message: "Status is required" }, { status: 400 });
     }
 
-    const updated = await updateTravelRequestStatus(id, body.status, userId);
+    const updated = await updateTravelRequestStatus(
+      id,
+      body.status,
+      userId,
+      body.remarks || body.approval_remarks
+    );
     return NextResponse.json({ data: updated }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ message: error.message || "Internal Server Error" }, { status: 500 });

@@ -121,15 +121,26 @@ export const LguLeaveStatusEnum = z.enum([
 ]);
 export type LguLeaveStatus = z.infer<typeof LguLeaveStatusEnum>;
 
+export interface LguEmployeeInfo {
+  userId: number;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  departmentId?: number | null;
+  departmentName?: string;
+  position?: string;
+  monthlySalary?: number | null;
+}
+
 export const LguLeaveRequestSchema = z.object({
   id: z.number().optional(),
   user_id: z.number(),
   department_id: z.number().nullable().optional(),
 
-  // 1-5. Office & Personal Details
+  // 1-5. Office & Personal Details (Auto-retrieved from user profile)
   office_department: z.string().nullable().optional(),
-  last_name: z.string().min(1, "Last name is required"),
-  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().nullable().optional(),
+  first_name: z.string().nullable().optional(),
   middle_name: z.string().nullable().optional(),
   date_of_filing: z.string(), // YYYY-MM-DD
   position: z.string().nullable().optional(),
