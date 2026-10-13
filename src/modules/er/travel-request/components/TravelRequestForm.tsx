@@ -2,6 +2,7 @@
  
 "use client";
 
+import { useRef, useState } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TravelRequestFormInput, TravelRequestFormInputSchema } from "../types/schema";
@@ -17,8 +18,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, Trash2, MapPin, FileText, Send, Wallet, ReceiptText, Banknote } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  MapPin,
+  FileText,
+  Send,
+  Wallet,
+  ReceiptText,
+  Banknote,
+  Paperclip,
+  Upload,
+  X,
+  Eye,
+  Loader2,
+  AlertCircle,
+  Image as ImageIcon,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import {
   Select,
@@ -35,15 +55,37 @@ interface TravelRequestFormProps {
   coas: any[];
 }
 
+function formatBytes(bytes: number, decimals = 2) {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+}
+
 export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFormProps) {
+  const [uploadedFile, setUploadedFile] = useState<{
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+  } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isAttachmentRequired, setIsAttachmentRequired] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<TravelRequestFormInput>({
     resolver: zodResolver(TravelRequestFormInputSchema),
+    mode: "onChange",
     defaultValues: {
       travel_from: "",
       travel_to: "",
       destination: "",
       purpose: "",
       requires_budget: false,
+      attachment_uuid: null,
       remarks: "",
       budget_items: [],
     },
@@ -54,14 +96,105 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
     control: form.control,
   });
 
+  const travelFrom = useWatch({
+    control: form.control,
+    name: "travel_from",
+  });
+
   const requiresBudget = useWatch({
     control: form.control,
     name: "requires_budget",
   });
 
+  const watchedBudgetItems = useWatch({
+    control: form.control,
+    name: "budget_items",
+  }) || [];
+
+  const totalBudget = (watchedBudgetItems || []).reduce((acc, curr) => {
+    const amt = Number(curr?.amount) || 0;
+    return acc + amt;
+  }, 0);
+
+  const handleFileUpload = async (file: File) => {
+    const validExtensions = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!validExtensions.includes(ext)) {
+      setUploadError("Invalid file type. Only PDF, JPG, PNG, and WEBP formats are allowed.");
+      toast.error("Invalid File Type", { description: "Please upload a PDF or image file." });
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadError("File size exceeds 15MB limit.");
+      toast.error("File Too Large", { description: "Maximum allowed file size is 15MB." });
+      return;
+    }
+
+    setUploadError(null);
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/er/travel-request/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || "Failed to upload file");
+      }
+
+      const json = await res.json();
+      const fileId = json.file_id;
+
+      setUploadedFile({
+        id: fileId,
+        name: json.filename_download || file.name,
+        size: json.filesize || file.size,
+        type: json.type || file.type,
+      });
+
+      form.setValue("attachment_uuid", fileId, { shouldValidate: true });
+      toast.success("Document Uploaded", {
+        description: `${file.name} attached successfully to travel order.`,
+      });
+    } catch (err: any) {
+      setUploadError(err.message || "Failed to upload file");
+      toast.error("Upload Failed", { description: err.message });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFormSubmit = (data: TravelRequestFormInput) => {
+    if (data.travel_from && data.travel_to && new Date(data.travel_from) > new Date(data.travel_to)) {
+      form.setError("travel_to", {
+        type: "manual",
+        message: "End date cannot be before the start date",
+      });
+      toast.error("Invalid Dates", {
+        description: "The travel end date cannot be before the start date.",
+      });
+      return;
+    }
+
+    if (isAttachmentRequired && !data.attachment_uuid) {
+      setUploadError("Official Communication Letter or Memo is required before submitting.");
+      toast.error("Document Required", {
+        description: "Please attach an official communication letter or memo as supporting document.",
+      });
+      return;
+    }
+    onSubmit(data);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8 py-4">
         <div className={cn("grid gap-8 items-start transition-all duration-300", requiresBudget ? "grid-cols-1 lg:grid-cols-12" : "grid-cols-1")}>
           
           {/* LEFT COLUMN: Main Details */}
@@ -93,7 +226,21 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
                       <FormControl>
-                        <Input type="date" className="bg-background/50 focus:bg-background transition-colors" {...field} />
+                        <Input
+                          type="date"
+                          className="bg-background/50 focus:bg-background transition-colors"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            const newFrom = e.target.value;
+                            const currentTo = form.getValues("travel_to");
+                            if (currentTo && newFrom && currentTo < newFrom) {
+                              form.setValue("travel_to", newFrom, { shouldValidate: true });
+                            } else {
+                              form.trigger("travel_to");
+                            }
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -107,7 +254,16 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                     <FormItem>
                       <FormLabel>End Date</FormLabel>
                       <FormControl>
-                        <Input type="date" className="bg-background/50 focus:bg-background transition-colors" {...field} />
+                        <Input
+                          type="date"
+                          min={travelFrom || undefined}
+                          className="bg-background/50 focus:bg-background transition-colors"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            form.trigger("travel_to");
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -149,6 +305,145 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                   </FormItem>
                 )}
               />
+
+              {/* Supporting Document: Communication Letter / Memo */}
+              <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4 shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border/40">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-semibold flex items-center gap-2">
+                      <Paperclip className="h-4 w-4 text-primary" />
+                      Official Communication Letter / Memo
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Attach official letter, memorandum, or invitation as supporting document.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={isAttachmentRequired ? "default" : "secondary"} className="text-[10px] font-mono uppercase">
+                      {isAttachmentRequired ? "Required" : "Optional"}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Validation setting toggle */}
+                <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                  <Checkbox
+                    id="require-memo"
+                    checked={isAttachmentRequired}
+                    onCheckedChange={(checked) => {
+                      setIsAttachmentRequired(Boolean(checked));
+                      if (!checked) setUploadError(null);
+                    }}
+                  />
+                  <label htmlFor="require-memo" className="cursor-pointer font-medium text-foreground">
+                    Enforce memo attachment requirement for this request
+                  </label>
+                </div>
+
+                {/* Hidden native input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                />
+
+                {uploadedFile ? (
+                  /* Uploaded Document Card */
+                  <div className="flex items-center justify-between p-3.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 transition-all">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2.5 rounded-md bg-emerald-500/10 text-emerald-600 shrink-0">
+                        {uploadedFile.type.includes("pdf") ? (
+                          <FileText className="w-5 h-5" />
+                        ) : (
+                          <ImageIcon className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-sm font-semibold text-foreground truncate" title={uploadedFile.name}>
+                          {uploadedFile.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatBytes(uploadedFile.size)} • <span className="text-emerald-600 font-medium">Ready to submit</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs text-primary hover:bg-primary/10"
+                        onClick={() => window.open(`/api/er/travel-request/file?path=${uploadedFile.id}`, "_blank")}
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1" /> Preview
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          setUploadedFile(null);
+                          form.setValue("attachment_uuid", null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Dropzone / Upload area */
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all text-center",
+                      uploadError
+                        ? "border-destructive/60 bg-destructive/5 hover:border-destructive"
+                        : "border-border/80 hover:border-primary/50 hover:bg-muted/20"
+                    )}
+                  >
+                    {isUploading ? (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <Loader2 className="w-7 h-7 text-primary animate-spin" />
+                        <p className="text-xs font-semibold text-foreground">Uploading communication letter...</p>
+                        <p className="text-[11px] text-muted-foreground">Please wait while the document is being processed.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="p-3 rounded-full bg-primary/10 text-primary mb-2">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground">
+                          Click to upload or drag & drop official memo / letter
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          PDF, JPG, PNG or WEBP (Max 15MB)
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {uploadError && (
+                  <p className="text-xs font-medium text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {uploadError}
+                  </p>
+                )}
+              </div>
             </div>
 
             <FormField
@@ -234,46 +529,74 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                       <p className="text-xs text-muted-foreground mt-1 max-w-[250px]">Click &quot;Add Item&quot; to start breaking down your expenses.</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-border/50">
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="group relative p-6 bg-background transition-all hover:bg-muted/10">
-                          
-                          <div className="flex items-center justify-between mb-4">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-md">
-                              Item {index + 1}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground opacity-50 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all rounded-full"
-                              onClick={() => remove(index)}
-                              disabled={fields.length === 1}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                    <div className="p-6 space-y-4">
+                      {fields.map((field, index) => {
+                        const currentCoaId = form.watch(`budget_items.${index}.coa_id`);
+                        const selectedCoa = coas?.find((c) => c.coa_id === currentCoaId);
+
+                        return (
+                          <div
+                            key={field.id}
+                            className="p-4 rounded-xl border border-border/80 bg-background/80 shadow-2xs space-y-3.5 hover:border-primary/40 transition-colors"
+                          >
+                            <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[11px] font-mono uppercase bg-muted/60">
+                                  Item {index + 1}
+                                </Badge>
+                                {selectedCoa && (
+                                  <span className="text-xs text-muted-foreground truncate max-w-[260px] sm:max-w-md">
+                                    <span className="font-semibold text-foreground/80">{selectedCoa.gl_code}</span> &bull; {selectedCoa.account_title}
+                                  </span>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-full"
+                                onClick={() => remove(index)}
+                                disabled={fields.length === 1}
+                                title={fields.length === 1 ? "At least one item is required" : "Remove item"}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+
+                            {/* Expense Category (Full width to comfortably accommodate long GL accounts) */}
                             <FormField
                               control={form.control}
                               name={`budget_items.${index}.coa_id`}
                               render={({ field: selectField }) => (
-                                <FormItem className="md:col-span-5">
-                                  <FormLabel className="text-xs font-semibold text-muted-foreground">Expense Category</FormLabel>
+                                <FormItem className="w-full space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel className="text-xs font-semibold text-muted-foreground">
+                                      Expense Category
+                                    </FormLabel>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      Chart of Accounts (COA)
+                                    </span>
+                                  </div>
                                   <Select
                                     onValueChange={(value) => selectField.onChange(Number(value))}
                                     value={selectField.value?.toString() || ""}
                                   >
                                     <FormControl>
-                                      <SelectTrigger className="w-full bg-background/50 h-9">
-                                        <SelectValue placeholder="Select category" />
+                                      <SelectTrigger className="w-full bg-background h-10 px-3 text-left [&>span]:truncate [&>span]:block [&>span]:text-left [&>span]:flex-1 [&>span]:min-w-0 overflow-hidden">
+                                        <SelectValue placeholder="Select an expense category..." />
                                       </SelectTrigger>
                                     </FormControl>
-                                    <SelectContent>
+                                    <SelectContent className="max-h-72">
                                       {coas?.map((coa) => (
-                                        <SelectItem key={coa.coa_id} value={coa.coa_id.toString()}>
-                                          {coa.gl_code} - {coa.account_title}
+                                        <SelectItem key={coa.coa_id} value={coa.coa_id.toString()} className="py-2.5">
+                                          <div className="flex items-center gap-2 text-left">
+                                            <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                                              {coa.gl_code}
+                                            </Badge>
+                                            <span className="text-xs font-medium text-foreground truncate max-w-[340px]">
+                                              {coa.account_title}
+                                            </span>
+                                          </div>
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -283,50 +606,89 @@ export function TravelRequestForm({ onSubmit, isLoading, coas }: TravelRequestFo
                               )}
                             />
 
-                            <FormField
-                              control={form.control}
-                              name={`budget_items.${index}.amount`}
-                              render={({ field: inputField }) => (
-                                <FormItem className="md:col-span-3">
-                                  <FormLabel className="text-xs font-semibold text-muted-foreground">Amount</FormLabel>
-                                  <FormControl>
-                                    <div className="relative flex items-center">
-                                      <span className="absolute left-2.5 text-muted-foreground text-[13px] font-medium pointer-events-none">₱</span>
-                                      <Input 
-                                        className="pl-7 pr-3 bg-background/50 h-9 font-medium"
-                                        type="number" 
-                                        step="0.01" 
-                                        placeholder="0.00" 
-                                        {...inputField} 
-                                        onChange={(e) => inputField.onChange(parseFloat(e.target.value))}
+                            {/* Amount & Item Details side-by-side */}
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start pt-1">
+                              <FormField
+                                control={form.control}
+                                name={`budget_items.${index}.amount`}
+                                render={({ field: inputField }) => (
+                                  <FormItem className="sm:col-span-5 space-y-1.5">
+                                    <FormLabel className="text-xs font-semibold text-muted-foreground">
+                                      Estimated Amount
+                                    </FormLabel>
+                                    <FormControl>
+                                      <div className="relative flex items-center">
+                                        <span className="absolute left-3 text-muted-foreground text-sm font-semibold pointer-events-none">₱</span>
+                                        <Input
+                                          className="pl-7 pr-3 bg-background h-10 font-semibold text-emerald-600 dark:text-emerald-400 text-sm"
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          placeholder="0.00"
+                                          {...inputField}
+                                          value={inputField.value === 0 && !inputField.value?.toString().includes(".") ? "" : inputField.value ?? ""}
+                                          onFocus={(e) => e.target.select()}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            inputField.onChange(val === "" ? 0 : parseFloat(val) || 0);
+                                          }}
+                                        />
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name={`budget_items.${index}.remarks`}
+                                render={({ field: inputField }) => (
+                                  <FormItem className="sm:col-span-7 space-y-1.5">
+                                    <FormLabel className="text-xs font-semibold text-muted-foreground">
+                                      Item Details / Remarks
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        className="bg-background h-10 text-xs"
+                                        placeholder="e.g. Flight ticket, lodging, fuel, per diem..."
+                                        {...inputField}
+                                        value={inputField.value || ""}
                                       />
-                                    </div>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            
-                            <FormField
-                              control={form.control}
-                              name={`budget_items.${index}.remarks`}
-                              render={({ field: inputField }) => (
-                                <FormItem className="md:col-span-4">
-                                  <FormLabel className="text-xs font-semibold text-muted-foreground">Item Details</FormLabel>
-                                  <FormControl>
-                                    <Input className="bg-background/50 h-9" placeholder="e.g. Flight, Hotel..." {...inputField} value={inputField.value || ""} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
+
+                  {/* Running Total & Summary Footer */}
+                  {fields.length > 0 && (
+                    <div className="p-4 bg-muted/40 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                          Total Requested Budget
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {fields.length} {fields.length === 1 ? "expense item" : "expense items"} planned
+                        </span>
+                      </div>
+                      <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {new Intl.NumberFormat("en-PH", {
+                          style: "currency",
+                          currency: "PHP",
+                        }).format(totalBudget)}
+                      </div>
+                    </div>
+                  )}
+
                   {form.formState.errors.budget_items?.root && (
-                    <p className="text-sm font-medium text-destructive mt-2 flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-destructive p-4 pt-0 flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-destructive inline-block"></span>
                       {form.formState.errors.budget_items.root.message}
                     </p>

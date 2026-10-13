@@ -1,9 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
  
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { decodeJwtPayload } from "@/lib/auth-utils";
-import { fetchTravelRequests, createTravelRequest } from "@/modules/er/travel-request/services/travel-request.service";
+import {
+  fetchTravelRequests,
+  fetchAllTravelRequestsForApproval,
+  createTravelRequest,
+} from "@/modules/er/travel-request/services/travel-request.service";
 import { TravelRequestFormInputSchema } from "@/modules/er/travel-request/types/schema";
 
 const COOKIE_NAME = "vos_access_token";
@@ -20,6 +24,14 @@ export async function GET(request: NextRequest) {
     const userId = payload?.sub ? Number(payload.sub) : null;
     if (!userId) {
       return NextResponse.json({ message: "Invalid token payload" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const scope = searchParams.get("scope");
+
+    if (scope === "approvals") {
+      const requests = await fetchAllTravelRequestsForApproval();
+      return NextResponse.json({ data: requests }, { status: 200 });
     }
 
     const requests = await fetchTravelRequests(userId);
@@ -56,8 +68,6 @@ export async function POST(request: NextRequest) {
 
     const { budget_items, ...requestData } = validatedData.data;
 
-    // TODO: Ideally we should get department_id and division_id from the user's profile
-    // For now we assume they might be passed or we fetch them if needed
     const newRequest = await createTravelRequest({
       ...requestData,
       user_id: userId,
@@ -71,5 +81,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
-
-
