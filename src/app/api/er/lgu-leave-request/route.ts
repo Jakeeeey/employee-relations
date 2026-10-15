@@ -40,11 +40,27 @@ export async function POST(request: NextRequest) {
     const authUserId = payload?.sub ? Number(payload.sub) : null;
 
     const body = await request.json();
+    const effectiveUserId = body.user_id || authUserId || 1;
 
-    const parsed = CreateLguLeaveSchema.safeParse({
+    // Automatically retrieve user information from the system
+    const empInfo = await LguLeaveService.getEmployeeInfo(effectiveUserId);
+
+    const enrichedBody = {
       ...body,
-      user_id: body.user_id || authUserId || 1,
-    });
+      user_id: effectiveUserId,
+      first_name: body.first_name || empInfo.firstName || "Employee",
+      middle_name: body.middle_name || empInfo.middleName || null,
+      last_name: body.last_name || empInfo.lastName || "User",
+      office_department: body.office_department || empInfo.departmentName || "Local Government Unit",
+      position: body.position || empInfo.position || null,
+      monthly_salary:
+        body.monthly_salary !== null && body.monthly_salary !== undefined
+          ? body.monthly_salary
+          : empInfo.monthlySalary,
+      department_id: body.department_id || empInfo.departmentId || null,
+    };
+
+    const parsed = CreateLguLeaveSchema.safeParse(enrichedBody);
 
     if (!parsed.success) {
       return NextResponse.json(
